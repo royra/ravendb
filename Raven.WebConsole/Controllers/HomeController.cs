@@ -36,12 +36,11 @@ namespace Raven.WebConsole.Controllers
                            : new RedirectResult(returnurl);
             }
 
-            dynamic model = new ExpandoObject();
+            ViewBag.Error = true;
+            ViewBag.User = user;
+            ViewBag.Persistent = persistent != null;
 
-            model.Error = true;
-            model.User = user;
-
-            return View(model);
+            return View();
         }
     }
 }

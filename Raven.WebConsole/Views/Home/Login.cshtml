@@ -60,15 +60,15 @@ label.error {
         <div id="title">Please log in to continue</div>
         
         <div id="fields">
-            <label for="user">User:</label> <input class="field" type="text" name="user" value="@(Model != null ? Model.User : null)"/>
+            <label for="user">User:</label> <input class="field" type="text" name="user" value="@ViewBag.User"/>
             <br/>
             <label for="password">Password:</label> <input class="field" type="password" name="password" />
             <br/>
-            <input type="checkbox" name="persistent"/> <label for="persistent">Remember me</label>
+            <input type="checkbox" name="persistent" @if (ViewBag.Persistent != null && ViewBag.Persistent) { <text>checked="checked"</text> }/> <label for="persistent">Remember me</label>
             
         </div>
 
-        <div id="message" class="@( Model != null && Model.Error ? "error" : null )"> @( Model != null && Model.Error ? "Invalid user or password" : null)</div>
+        <div id="message" class="@( ViewBag.Error != null && ViewBag.Error ? "error" : null)"> @( ViewBag.Error != null && ViewBag.Error ? "Invalid user or password" : null)</div>
 
         <div id="buttons">
             <button type="submit">Login</button>
