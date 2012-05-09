@@ -1,0 +1,94 @@
+﻿@model dynamic
+
+@{
+    ViewBag.Title = "Login";
+    Layout = "../Shared/_Layout.cshtml";
+}
+
+@section head
+{
+<style type="text/css">
+#outerContainer {
+    width: 100%
+}
+
+#loginBox {
+    margin-left: auto;
+    margin-right: auto;
+    width: 350px;
+}
+
+#loginBox #title {
+    font-size: 20px;
+    min-height: 3em;
+    vertical-align: top;
+}
+    
+#loginBox label {
+    display: inline-block;
+    width: 100px;
+    margin-bottom: 10px;
+}
+
+#loginBox .field {
+    display: inline-block;
+    width: 100px;
+}
+    
+#buttons {
+    margin-top: 5px;
+}
+    
+#message {
+    min-height: 1.5em;            
+}
+
+#message.error {
+    color: red;
+}
+
+label.error {
+    color: red;
+    margin-left: 10px;
+    width: 20px;
+}
+</style>
+}
+
+<div id="outerContainer">
+    <form id="loginBox" method="post">
+        <div id="title">Please log in to continue</div>
+        
+        <div id="fields">
+            <label for="user">User:</label> <input class="field" type="text" name="user" value="@(Model != null ? Model.User : null)"/>
+            <br/>
+            <label for="password">Password:</label> <input class="field" type="password" name="password" />
+            <br/>
+            <input type="checkbox" name="persistent"/> <label for="persistent">Remember me</label>
+            
+        </div>
+
+        <div id="message" class="@( Model != null && Model.Error ? "error" : null )"> @( Model != null && Model.Error ? "Invalid user or password" : null)</div>
+
+        <div id="buttons">
+            <button type="submit">Login</button>
+        </div>
+    </form>
+</div>
+
+<script type="text/javascript">
+    $.extend($.validator.messages, {
+        required: "*"
+    });
+
+    $(document).ready(function () {
+        $('form').validate({
+            rules: {
+                user: "required",
+                password: "required"
+            }
+        });
+
+        $('form input:visible:first').focus();
+    });
+</script>

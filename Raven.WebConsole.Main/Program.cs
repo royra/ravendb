@@ -13,8 +13,8 @@ namespace Raven.WebConsole.Main
                 port = int.Parse(args[0]);
             }
 
-            var webDir = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, @"..\..\..\RavenDB.WebConsole"));
-            using (var server = new WebServer(webDir, port, "RavenDB.WebConsole"))
+            var webDir = Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, @"..\..\..\Raven.WebConsole"));
+            using (var server = new WebServer(webDir, port, "Raven.WebConsole"))
             {
                 server.Start();
 
