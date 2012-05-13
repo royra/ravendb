@@ -5,6 +5,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.WebConsole.Main", "Ra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.WebConsole", "Raven.WebConsole\Raven.WebConsole.csproj", "{D33ED0EF-1051-4908-8E23-20C971722B7F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raven.WebConsole.Tests", "Raven.WebConsole.Tests\Raven.WebConsole.Tests.csproj", "{8B07F8BA-337B-4401-B570-BD5A66D7912D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -19,6 +21,10 @@ Global
 		{D33ED0EF-1051-4908-8E23-20C971722B7F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D33ED0EF-1051-4908-8E23-20C971722B7F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D33ED0EF-1051-4908-8E23-20C971722B7F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B07F8BA-337B-4401-B570-BD5A66D7912D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B07F8BA-337B-4401-B570-BD5A66D7912D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B07F8BA-337B-4401-B570-BD5A66D7912D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B07F8BA-337B-4401-B570-BD5A66D7912D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

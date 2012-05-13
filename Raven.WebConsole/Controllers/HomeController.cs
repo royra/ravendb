@@ -1,11 +1,12 @@
-﻿using System.Dynamic;
-using System.Globalization;
+﻿using System.Linq;
 using System.Web.Mvc;
 using System.Web.Security;
+using Raven.Client.Linq;
+using Raven.WebConsole.Entities;
 
 namespace Raven.WebConsole.Controllers
 {
-    public class HomeController : Controller
+    public class HomeController : BaseController
     {
         [Authorize]
         public ActionResult Index()
@@ -24,7 +25,11 @@ namespace Raven.WebConsole.Controllers
             user = user ?? "";
             user = user.Trim().ToLowerInvariant();
 
-            var success = user == "admin" && password == "12345";
+// ReSharper disable ReplaceWithSingleCallToFirstOrDefault
+            var ravenUser = RavenSession.Query<User>().Where(u => u.Name == user).FirstOrDefault();
+// ReSharper restore ReplaceWithSingleCallToFirstOrDefault
+
+            var success = ravenUser != null && ravenUser.Password.Check(password);
 
             if (success)
             {
