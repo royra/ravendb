@@ -1,0 +1,55 @@
+﻿@using Raven.WebConsole.Utils
+@model Raven.WebConsole.ViewModels.DatabasesViewModel
+
+@{
+    ViewBag.Title = "Databases";
+    Layout = "~/Views/Shared/ContentPage.cshtml";
+}
+
+<h1>@ViewBag.Title</h1>
+
+<p>
+@Html.ActionLink("Create a new database", "New")
+</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Size</th>
+            <th>Options</th>
+            <th>Last Backup</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach(var db in Model.Databases)
+        {
+            <tr>
+                <td><a href="@(Model.BaseUrl)/raven/studio.html#/home?database=@db.Name">@db.Name</a></td>
+                <td><span class="size">@db.SizeMb</span> MB</td>
+                <td>@string.Join("; ", db.Options)</td>
+                <td><span class="humaneDate" data-date="@db.LastBackup.ToJavascriptDate()"></span></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        var updateDates = function () {
+            $('.humaneDate').each(function() {
+                var $t = $(this);
+                var d = $t.data('date');
+                var s = d == '' ? 'Never' : humaneDate(new Date(d));
+                $t.html(s);
+            });
+        };
+
+        setTimeout(function () {
+            updateDates();
+            setTimeout(updateDates, 60 * 1000);
+        });
+
+        updateDates();
+    });
+</script>

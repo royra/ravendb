@@ -47,6 +47,9 @@
       <HintPath>..\packages\log4net.2.0.0\lib\net40-full\log4net.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=4.0.8.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL" />
+    <Reference Include="Raven.Bundles.Authentication">
+      <HintPath>..\Bundles\Raven.Bundles.Authentication\bin\Debug\Raven.Bundles.Authentication.dll</HintPath>
+    </Reference>
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Data.Entity" />
     <Reference Include="System.Web.Mvc, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
@@ -70,19 +73,119 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Controllers\BaseController.cs" />
+    <Compile Include="Controllers\BundlesController.cs" />
+    <Compile Include="Controllers\ContentController.cs" />
+    <Compile Include="Controllers\DatabasesController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
-    <Compile Include="Entities\Password.cs" />
-    <Compile Include="Entities\RootAggregate.cs" />
-    <Compile Include="Entities\User.cs" />
+    <Compile Include="ViewModels\UsersViewModel.cs" />
+    <Compile Include="Utils\DecimalExtensions.cs" />
+    <Compile Include="Utils\MyWebClient.cs" />
+    <Compile Include="Controllers\ReplicationController.cs" />
+    <Compile Include="Controllers\UsersController.cs" />
+    <Compile Include="Utils\DateTimeExtensions.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="ViewModels\DatabasesViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Content\all.css" />
+    <Content Include="Content\fancybox.css" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
+    <Content Include="images\arrow01.png" />
+    <Content Include="images\arrow02.png" />
+    <Content Include="images\bg-aside.png" />
+    <Content Include="images\bg-button.png" />
+    <Content Include="images\bg-corner.gif" />
+    <Content Include="images\bg-figcaption.png" />
+    <Content Include="images\bg-figure.png" />
+    <Content Include="images\bg-footer-glow.jpg" />
+    <Content Include="images\bg-footer.jpg" />
+    <Content Include="images\bg-grippie.gif" />
+    <Content Include="images\bg-intro.png" />
+    <Content Include="images\bg-linksnav-item.png" />
+    <Content Include="images\bg-linksnav.png" />
+    <Content Include="images\bg-main-b.jpg" />
+    <Content Include="images\bg-main-nav-drop-b.png" />
+    <Content Include="images\bg-main-nav-drop-h.gif" />
+    <Content Include="images\bg-main-nav-drop.png" />
+    <Content Include="images\bg-main-nav-h.gif" />
+    <Content Include="images\bg-main-nav.png" />
+    <Content Include="images\bg-main-t.jpg" />
+    <Content Include="images\bg-mini-btn.png" />
+    <Content Include="images\bg-opener.gif" />
+    <Content Include="images\bg-photo-scope.png" />
+    <Content Include="images\bg-price-unit.png" />
+    <Content Include="images\bg-ql.png" />
+    <Content Include="images\bg-qr.png" />
+    <Content Include="images\bg-quote.png" />
+    <Content Include="images\bg-side-box.png" />
+    <Content Include="images\bg-side-col.png" />
+    <Content Include="images\bg-slideshow.png" />
+    <Content Include="images\bg-switcher.png" />
+    <Content Include="images\bg-topbar.gif" />
+    <Content Include="images\bg-topnav-h.gif" />
+    <Content Include="images\btn-back.png" />
+    <Content Include="images\btn-read-more.png" />
+    <Content Include="images\fancybox\blank.gif" />
+    <Content Include="images\fancybox\fancybox-x.png" />
+    <Content Include="images\fancybox\fancybox-y.png" />
+    <Content Include="images\fancybox\fancybox.png" />
+    <Content Include="images\fancybox\fancy_close.png" />
+    <Content Include="images\fancybox\fancy_loading.png" />
+    <Content Include="images\fancybox\fancy_nav_left.png" />
+    <Content Include="images\fancybox\fancy_nav_right.png" />
+    <Content Include="images\fancybox\fancy_shadow_e.png" />
+    <Content Include="images\fancybox\fancy_shadow_n.png" />
+    <Content Include="images\fancybox\fancy_shadow_ne.png" />
+    <Content Include="images\fancybox\fancy_shadow_nw.png" />
+    <Content Include="images\fancybox\fancy_shadow_s.png" />
+    <Content Include="images\fancybox\fancy_shadow_se.png" />
+    <Content Include="images\fancybox\fancy_shadow_sw.png" />
+    <Content Include="images\fancybox\fancy_shadow_w.png" />
+    <Content Include="images\fancybox\fancy_title_left.png" />
+    <Content Include="images\fancybox\fancy_title_main.png" />
+    <Content Include="images\fancybox\fancy_title_over.png" />
+    <Content Include="images\fancybox\fancy_title_right.png" />
+    <Content Include="images\icon-info.png" />
+    <Content Include="images\icon-lock.gif" />
+    <Content Include="images\icon-note.png" />
+    <Content Include="images\icon-opener.png" />
+    <Content Include="images\icon-tip.png" />
+    <Content Include="images\icon-user.png" />
+    <Content Include="images\icon-warning.png" />
+    <Content Include="images\icon01.gif" />
+    <Content Include="images\icon02.png" />
+    <Content Include="images\img01.jpg" />
+    <Content Include="images\img02.jpg" />
     <Content Include="images\logo-ravendb.png" />
+    <Content Include="images\logo-rhino.png" />
+    <Content Include="images\logo-t01.png" />
+    <Content Include="images\logo01.png" />
+    <Content Include="images\nav-sprite.png" />
+    <Content Include="images\none.gif" />
+    <Content Include="images\photo01.jpg" />
+    <Content Include="images\photo02.jpg" />
+    <Content Include="images\rating02.png" />
+    <Content Include="images\rating03.png" />
+    <Content Include="images\rating12.png" />
+    <Content Include="images\rating13.png" />
+    <Content Include="images\search-btn.png" />
+    <Content Include="images\search-field.png" />
+    <Content Include="images\sep01.gif" />
+    <Content Include="images\sep02.png" />
+    <Content Include="images\sep03.gif" />
+    <Content Include="images\sep04.gif" />
+    <Content Include="images\sep05.gif" />
+    <Content Include="images\sep06.png" />
+    <Content Include="images\sep07.gif" />
+    <Content Include="images\sep08.png" />
+    <Content Include="images\slide-banner01.png" />
+    <Content Include="images\slide-banner02.png" />
+    <Content Include="images\soc-sprite.png" />
+    <Content Include="Scripts\humane.js" />
     <Content Include="Scripts\jquery-1.7.2-vsdoc.js" />
     <Content Include="Scripts\jquery-1.7.2.js" />
     <Content Include="Scripts\jquery-1.7.2.min.js" />
@@ -117,7 +220,7 @@
     <Content Include="Views\Shared\_Layout.cshtml" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Models\" />
+    <Content Include="Views\Databases\Index.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="packages.config" />
@@ -145,6 +248,15 @@
       <Project>{AA580048-17C7-4B1E-AA3A-321157CF3511}</Project>
       <Name>Raven.Client.MvcIntegration</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Views\Shared\ContentPage.cshtml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Views\Databases\New.cshtml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Views\Users\Index.cshtml" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" />

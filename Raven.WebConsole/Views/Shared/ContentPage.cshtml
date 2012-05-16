@@ -1,0 +1,43 @@
+﻿@using System.Linq.Expressions
+@using Raven.WebConsole.Controllers
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section LoggedInUser {
+    <div class="login-box registered">Hello @ViewBag.User | @Html.ActionLink("Logout", "Logout", "Home")</div>
+}
+
+<nav id="main-nav">
+	<ul id="nav">
+        @helper TopMenuItem(string n, params string[] s) {
+			<li @if (n == ViewBag.Title) { <text>class="active"</text>}>
+				<a href="@Url.Action("Index", n)"><span><em>@n</em></span></a>
+            @if (s.Length > 0)
+            {
+			<div class="drop">
+				<ul>
+                    @foreach(var b in s)
+                    {
+                        <li><a href="@Url.Action(b, n)"><span><em>@b</em></span></a></li>    
+                    }
+				</ul>
+				<div class="b"></div>
+			</div>
+            }
+			</li>
+        }
+
+        @TopMenuItem("Databases")
+        @TopMenuItem("Users")
+        @TopMenuItem("Replication")
+        @TopMenuItem("Bundles")
+        
+	</ul>
+</nav>
+<div class="col-set">
+    <div id="content">
+        @RenderBody()
+    </div>
+</div>
+

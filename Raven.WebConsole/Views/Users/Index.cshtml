@@ -1,0 +1,25 @@
+﻿@model Raven.WebConsole.ViewModels.UsersViewModel
+
+@{
+    ViewBag.Title = "Users";
+    Layout = "../Shared/ContentPage.cshtml";
+}
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Admin</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach(var user in Model.Users)
+        {
+            <tr>
+                <td>@user.Name</td>
+                <td>@(user.IsAdmin ? "Yes" : "No")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+

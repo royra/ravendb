@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Reflection;
-using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
 using Autofac;
 using Autofac.Integration.Mvc;
+using Raven.Bundles.Authentication;
 using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
-using Raven.WebConsole.Entities;
+using Raven.WebConsole.Utils;
 
 namespace Raven.WebConsole
 {
@@ -44,14 +42,7 @@ namespace Raven.WebConsole
 
         protected void Application_Start()
         {
-            var store = CreateDocumentStore();
-            SetupAutofac(store);
-
-            using (var session = store.OpenSession())
-            {
-                SetupDefaultUser(session);
-                session.SaveChanges();
-            }
+            SetupAutofac();
 
             AreaRegistration.RegisterAllAreas();
 
@@ -59,23 +50,41 @@ namespace Raven.WebConsole
             RegisterRoutes(RouteTable.Routes);
         }
 
-        private static void SetupAutofac(DocumentStore store)
+        private static void SetupAutofac()
         {
             var builder = new ContainerBuilder();
             builder.RegisterModule(new AutofacWebTypesModule());
             builder.RegisterControllers(Assembly.GetExecutingAssembly());
 
-            builder.Register(cb => store.OpenSession()).InstancePerLifetimeScope();
+            builder.Register<IDocumentStore>(cb =>
+                                 {
+                                     var store = CreateDocumentStore();
+                                     CreateDefaultUser(store);
+                                     return store;
+                                 }).SingleInstance();
+
+            builder.Register(cb => cb.Resolve<IDocumentStore>().OpenSession()).InstancePerLifetimeScope();
+            builder.RegisterType(typeof (MyWebClient)).AsImplementedInterfaces().InstancePerLifetimeScope();
 
             var container = builder.Build();
             DependencyResolver.SetResolver(new AutofacDependencyResolver(container));
         }
 
-        private void SetupDefaultUser(IDocumentSession session)
+        private static void CreateDefaultUser(IDocumentStore store)
         {
-            if (session.Query<User>().FirstOrDefault() == null)
+            using (var session = store.OpenSession())
             {
-                session.Store(new User {Name = "admin", Password = new Password("12345")});
+                if (session.Query<AuthenticationUser>().FirstOrDefault() == null)
+                {
+                    session.Store(new AuthenticationUser
+                                      {
+                                          Id = "Users/admin",
+                                          Admin = true,
+                                          AllowedDatabases = new []{"*"},
+                                          Name = "Admin"
+                                      }.SetPassword("12345"));
+                }
+                session.SaveChanges();
             }
         }
 
