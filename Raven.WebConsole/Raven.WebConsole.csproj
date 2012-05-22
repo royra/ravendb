@@ -92,6 +92,7 @@
   <ItemGroup>
     <Content Include="Content\all.css" />
     <Content Include="Content\fancybox.css" />
+    <Content Include="Content\jquery-ui-1.8.20.humanity.custom.css" />
     <Content Include="Global.asax" />
     <Content Include="Content\Site.css" />
     <Content Include="images\arrow01.png" />
@@ -129,6 +130,7 @@
     <Content Include="images\bg-topnav-h.gif" />
     <Content Include="images\btn-back.png" />
     <Content Include="images\btn-read-more.png" />
+    <Content Include="images\db.png" />
     <Content Include="images\fancybox\blank.gif" />
     <Content Include="images\fancybox\fancybox-x.png" />
     <Content Include="images\fancybox\fancybox-y.png" />

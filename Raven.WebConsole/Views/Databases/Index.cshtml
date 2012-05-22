@@ -6,33 +6,36 @@
     Layout = "~/Views/Shared/ContentPage.cshtml";
 }
 
-<h1>@ViewBag.Title</h1>
+<div class="head">
+    <h1 style="float:left;">@ViewBag.Title</h1>
+    <a id="newButton" class="button" style="float:right;" href="javascript:void(0);">Create a new database</a>
+    <div style="float:none;clear:both"></div>
+<div/>
 
-<p>
-@Html.ActionLink("Create a new database", "New")
-</p>
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Size</th>
-            <th>Options</th>
-            <th>Last Backup</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach(var db in Model.Databases)
-        {
-            <tr>
-                <td><a href="@(Model.BaseUrl)/raven/studio.html#/home?database=@db.Name">@db.Name</a></td>
-                <td><span class="size">@db.SizeMb</span> MB</td>
-                <td>@string.Join("; ", db.Options)</td>
-                <td><span class="humaneDate" data-date="@db.LastBackup.ToJavascriptDate()"></span></td>
-            </tr>
-        }
-    </tbody>
-</table>
+<ul class="flach db">
+    @foreach (var db in Model.Databases)
+    {
+        <li>
+            <a class="name" title="Click to open studio" href="@(Model.BaseUrl)/raven/studio.html#/home?database=@db.Name">@db.Name</a>
+            <ul class="props">
+                <li>
+                    <span class="name">Size:</span><span class="value">@db.SizeMb MB</span>
+                </li>
+                <li>
+                    <span class="name">Last backup:</span><span class="value"><span class="humaneDate" data-date="@db.LastBackup.ToJavascriptDate()"></span></span>
+                </li>
+            </ul>
+            <ul class="buttons">
+                <li>
+                    <a class="delete button" href="javascript:void(0);">Delete</a>
+                    <form style="display: none" action="@Url.Action("Delete", new {name=db.Name})" method="post"></form>
+                </li>
+                <li><a class="backup button" href="javascript:void(0);">Backup</a></li>
+                <li><a class="restore button" href="javascript:void(0);">Restore</a></li>
+            </ul>
+        </li>
+    }
+</ul>
 
 <script type="text/javascript">
     $(document).ready(function () {
@@ -51,5 +54,62 @@
         });
 
         updateDates();
+    });
+</script>
+
+<div id="newDialog">
+    <form action="@Url.Action("New")" method="post" style="margin-top: 20px; margin-bottom: 20px">
+        <fieldset>
+            <legend></legend>
+            <label for="name">Name: </label>
+            <input type="text" name="name" />
+        </fieldset>
+    </form>
+</div>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#newButton').button({ icons: { primary: 'ui-icon-plus'} });
+        $('.button.delete')
+            .on('click', function() {
+                if (!confirm("Are you sure?")) {
+                    return false;
+                }
+
+                $(this).parent().find('form').submit();
+                return true;
+            })
+            .button({ icons: { primary: 'ui-icon-trash'} });
+        $('.button.restore').button({ icons: { primary: 'rd-icon-restore'} });
+        $('.button.backup').button({ icons: { primary: 'rd-icon-backup'} });
+
+
+        
+        $('#newDialog form').validate({
+            rules: {
+                name: {
+                    required: true,
+                    minlength: 3,
+                    remote: {url: "@Url.Action("ValidateName")", cache: false}
+                }
+            }
+        });
+        
+        $('#newDialog').dialog({
+            autoOpen: false,
+            modal: true,
+            title: "Create a new database",
+            width: 500,
+            buttons: {
+                "Create": function () {
+                    $(this).find('form').submit();
+                },
+                "Cancel": function () {
+                    $(this).dialog('close');
+                }
+            }
+        });
+
+        $('#newButton').on('click', function () { $('#newDialog').dialog('open'); });
     });
 </script>

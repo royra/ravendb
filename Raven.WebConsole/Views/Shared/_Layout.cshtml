@@ -3,14 +3,22 @@
 <head>
     <meta charset="utf-8" />
     <title>RavenDB - @ViewBag.Title</title>
+    <link href="@Url.Content("~/Content/jquery-ui-1.8.20.humanity.custom.css")" rel="stylesheet" type="text/css" />
     <link href="@Url.Content("~/Content/all.css")" rel="stylesheet" type="text/css" />
-    <link href="@Url.Content("~/Content/fancybox.css")" rel="stylesheet" type="text/css" />
-    <script src="@Url.Content("~/Scripts/jquery-1.7.2.min.js")" type="text/javascript"></script>
+    @*<link href="@Url.Content("~/Content/fancybox.css")" rel="stylesheet" type="text/css" />*@
+    <script src="@Url.Content("~/Scripts/jquery-1.7.2.js")" type="text/javascript"></script>
     <script src="@Url.Content("~/Scripts/modernizr-2.5.3.js")" type="text/javascript"></script>
-    <script src="@Url.Content("~/Scripts/jquery.validate.min.js")" type="text/javascript"></script>
+    <script src="@Url.Content("~/Scripts/jquery.validate.js")" type="text/javascript"></script>
+    <script src="@Url.Content("~/Scripts/jquery-ui-1.8.19.js")" type="text/javascript"></script>
     <script src="@Url.Content("~/Scripts/humane.js")" type="text/javascript"></script>
 
     @RenderSection("head", false)
+
+    <script type="text/javascript">
+    $.extend($.validator.messages, {
+        required: "*"
+    });
+    </script>
 </head>
 
 <body>

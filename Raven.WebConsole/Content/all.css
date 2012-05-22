@@ -1504,27 +1504,166 @@ strong.main-title{display:block;}
 	text-indent:-9999px;
 }
 
-
-table {
+ul.flach {
+    padding: 0px;
+    width: 400px;
+    color: #666666;
     width: 100%;
-    border-spacing: 0px;
-    border: 1px solid black;
+    max-width: 1000px;
 }
 
-table td, table th {
-    border-right: 1px solid black;
-    border-bottom: 1px solid black;
-    padding: 5px;
+ul.flach, ul.flach ul {
+    list-style: none outside none;
+    padding-left: 0;
 }
 
-table tr:last-child td {
-    border-bottom: none;
+ul.flach>li {
+    position: relative;
+    display: block;
+    margin-bottom: 30px;
+    width: 430px;
+    padding: 10px;
+    border: 1px solid #333333;
+    box-shadow: 3px 3px 3px 3px #cccccc;
+    border-radius: 3px;
 }
 
-table td:last-child, table th:last-child {
-    border-right: none;
+ul.flach.db>li {
+    height: 100px;
+    display: inline-block;
 }
 
-table th {
-    text-align: left;
+ul.flach.user>li {
+    height: 80px;
+}
+
+ul.flach.db>li:nth-child(2n+1) {
+    margin-right: 50px;
+}
+
+ul.flach>li>.name {
+    font-size: 16px;
+    background-repeat: no-repeat;
+    background-position: left;
+    padding-left: 60px;
+    height: 48px;
+    line-height: 48px;
+    display: inline-block;
+    vertical-align: middle;
+    text-shadow: 1px 1px #CCCCCC;
+    text-decoration: none;
+}
+
+ul.flach.db>li:hover>.name {
+    text-decoration: underline;
+}
+
+ul.flach.db>li>.name {
+    background-image: url('/images/db.png');
+}
+
+ul.flach.user>li>.name {
+    background-image: url('/images/user.png');
+}
+
+ul.flach ul.props {
+    float: right;
+    display: inline-block;
+    width: 180px;
+    color: #555555;
+}
+
+ul.flach ul.props .name {
+    font-size: 13px;
+    display: inline-block;
+    width: 80px;
+}
+
+ul.flach ul.props .value {
+    font-size: 13px;
+    font-weight: bold;
+    padding-left: 5px;
+    width: 90px;
+    float: right;
+}
+
+ul.flach ul.buttons .button {
+    visibility: hidden;
+}
+
+.buttons {
+    overflow: hidden;
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+}
+
+
+ul.flach>li:hover ul.buttons .button {
+    visibility: visible;
+}
+
+
+ul.flach ul.buttons li {
+    float: left;
+    margin: 0 5px;
+}
+
+/*
+.lbutton {
+    display: inline-block;
+	text-decoration: none;
+	line-height: 1.3em;
+	padding: 4px 8px;
+	font-size: 12px;
+	color: #fff;
+	font-weight: bold;
+	outline: none;
+	border-radius: 4px;
+	background: linear-gradient(top, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.1));
+	text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+	background-color: #b0b0b0;
+	border: 1px solid #666666;
+}
+
+.lbutton.hasicon16 {
+    padding-left: 25px;
+    background-repeat: no-repeat;
+    background-position: 4px 4px;
+}
+
+.lbutton.hasicon24 {
+    padding-left: 38px;
+    background-repeat: no-repeat;
+    background-position: 7px 8px;
+    padding-right: 10px;
+}
+
+.lbutton:hover {
+	background-color: #cfcfcf;
+}
+
+.lbutton:active {
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(top, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.2));
+}
+
+.lbutton.large {
+	line-height: 2em;
+	font-size: 16px;
+}
+*/
+
+.ui-button .ui-icon.rd-icon-restore {
+    background-image: url(/images/db_up.png);
+}
+
+.ui-button .ui-icon.rd-icon-backup {
+    background-image: url(/images/db_down.png);
+}
+
+label.error {
+    color: #9d2144;
+    margin-left: 15px;
 }

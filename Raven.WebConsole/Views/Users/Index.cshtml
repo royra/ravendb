@@ -5,21 +5,91 @@
     Layout = "../Shared/ContentPage.cshtml";
 }
 
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Admin</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach(var user in Model.Users)
-        {
-            <tr>
-                <td>@user.Name</td>
-                <td>@(user.IsAdmin ? "Yes" : "No")</td>
-            </tr>
-        }
-    </tbody>
-</table>
+<div class="head">
+    <h1 style="float:left;">@ViewBag.Title</h1>
+    <a id="newButton" class="button" style="float:right;" href="javascript:void(0);">Create a new user</a>
+    <div style="float:none;clear:both"></div>
+<div/>
 
+<ul class="flach user">
+    @foreach (var user in Model.Users)
+    {
+        <li>
+            <span class="name">@user.Name</span>
+            <ul class="props">
+                <li>
+                    <span class="name">Admin:</span><span class="value">@(user.IsAdmin ? "Yes" : "No")</span>
+                </li>
+            </ul>
+            <ul class="buttons">
+                <li>
+                    <a class="delete button" href="javascript:void(0);">Delete</a>
+                    <form style="display: none" action="@Url.Action("Delete", new {name=user.Name})" method="post"></form>
+                </li>
+            </ul>
+        </li>
+    }
+</ul>
+
+<div id="newDialog">
+    <form action="@Url.Action("New")" method="post" style="margin-top: 20px; margin-bottom: 20px">
+        <fieldset>
+            <legend></legend>
+            <label for="name">Name: </label>
+            <input type="text" name="name" />
+            <br/>
+            <label for="name">Admin: </label>
+            <input type="checkbox" name="isAdmin" />
+            <br/>
+            <label for="name">Password: </label>
+            <input type="password" name="password" />
+        </fieldset>
+    </form>
+</div>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#newButton').button({ icons: { primary: 'ui-icon-plus'} });
+        $('.button.delete')
+            .on('click', function() {
+                if (!confirm("Are you sure?")) {
+                    return false;
+                }
+
+                $(this).parent().find('form').submit();
+                return true;
+            })
+            .button({ icons: { primary: 'ui-icon-trash'} });
+        
+        $('#newDialog form').validate({
+            rules: {
+                name: {
+                    required: true,
+                    minlength: 3,
+                    remote: {url: "@Url.Action("ValidateName")", cache: false}
+                },
+                password: {
+                    required: true,
+                    minlength: 5
+                }
+            }
+        });
+        
+        $('#newDialog').dialog({
+            autoOpen: false,
+            modal: true,
+            title: "Create a new database",
+            width: 500,
+            buttons: {
+                "Create": function () {
+                    $(this).find('form').submit();
+                },
+                "Cancel": function () {
+                    $(this).dialog('close');
+                }
+            }
+        });
+
+        $('#newButton').on('click', function () { $('#newDialog').dialog('open'); });
+    });
+</script>
