@@ -73,16 +73,14 @@ namespace Raven.WebConsole.Controllers
 
             using (var session = store.OpenSession())
             {
-                if (session.Query<AuthenticationUser>().FirstOrDefault() == null)
+                session.Store(new AuthenticationUser
                 {
-                    session.Store(new AuthenticationUser
-                    {
-                        Id = string.Format("Users/{0}", model.Name),
-                        Admin = model.IsAdmin,
-                        AllowedDatabases = new[] { "*" },
-                        Name = model.Name,
-                    }.SetPassword(model.Password));
-                }
+                    Id = string.Format("Users/{0}", model.Name),
+                    Admin = model.IsAdmin,
+                    AllowedDatabases = new[] { "*" },
+                    Name = model.Name,
+                }.SetPassword(model.Password));
+
                 session.SaveChanges();
             }
 
