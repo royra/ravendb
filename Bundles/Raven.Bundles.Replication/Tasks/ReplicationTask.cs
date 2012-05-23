@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -43,9 +44,10 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			docDb = database;
 			var replicationRequestTimeoutInMs =
-				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ?? 7500;
+				docDb.Configuration.GetConfigurationValue<int>("Raven/Replication/ReplicationRequestTimeout") ??
+				60*1000;
 
-			httpRavenRequestFactory = new HttpRavenRequestFactory {RequestTimeoutInMs = replicationRequestTimeoutInMs};
+			httpRavenRequestFactory = new HttpRavenRequestFactory { RequestTimeoutInMs = replicationRequestTimeoutInMs };
 
 			var thread = new Thread(Execute)
 			{
@@ -107,7 +109,7 @@ namespace Raven.Bundles.Replication.Tasks
 										if (completedTask.Result) // force re-evaluation of replication again
 											docDb.WorkContext.NotifyAboutWork();
 									});
-							   
+
 							}
 						}
 					}
@@ -119,8 +121,8 @@ namespace Raven.Bundles.Replication.Tasks
 
 				runningBecauseOfDataModifications = context.WaitForWork(timeToWaitInMinutes, ref workCounter, name);
 				timeToWaitInMinutes = runningBecauseOfDataModifications
-				                      	? TimeSpan.FromSeconds(30)
-				                      	: TimeSpan.FromMinutes(5);
+										? TimeSpan.FromSeconds(30)
+										: TimeSpan.FromMinutes(5);
 			}
 		}
 
@@ -132,7 +134,7 @@ namespace Raven.Bundles.Replication.Tasks
 			var failureInformation = jsonDocument.DataAsJson.JsonDeserialization<DestinationFailureInformation>();
 			if (failureInformation.FailureCount > 1000)
 			{
-				var shouldReplicateTo = currentReplicationAttempts%10 == 0;
+				var shouldReplicateTo = currentReplicationAttempts % 10 == 0;
 				log.Debug("Failure count for {0} is {1}, skipping replication: {2}",
 					dest, failureInformation.FailureCount, shouldReplicateTo == false);
 				return shouldReplicateTo;
@@ -156,7 +158,7 @@ namespace Raven.Bundles.Replication.Tasks
 
 		private static string EscapeDestinationName(ReplicationStrategy dest)
 		{
-			return Uri.EscapeDataString(dest.ConnectionStringOptions.Url.Replace("http://", "").Replace("/", "").Replace(":",""));
+			return Uri.EscapeDataString(dest.ConnectionStringOptions.Url.Replace("http://", "").Replace("/", "").Replace(":", ""));
 		}
 
 		private void WarnIfNoReplicationTargetsWereFound()
@@ -212,7 +214,7 @@ namespace Raven.Bundles.Replication.Tasks
 					return replicated ?? false;
 				}
 			}
-			finally 
+			finally
 			{
 				var holder = activeReplicationTasks.GetOrAdd(destination.ConnectionStringOptions.Url, new IntHolder());
 				Thread.VolatileWrite(ref holder.Value, 0);
@@ -239,6 +241,7 @@ namespace Raven.Bundles.Replication.Tasks
 				IncrementFailureCount(destination);
 				return false;
 			}
+			ResetFailureCount(destination);
 
 			return true;
 		}
@@ -247,7 +250,9 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			var jsonDocuments = GetJsonDocuments(destinationsReplicationInformationForSource, destination);
 			if (jsonDocuments == null || jsonDocuments.Length == 0)
+			{
 				return null;
+			}
 			if (TryReplicationDocuments(destination, jsonDocuments) == false)// failed to replicate, start error handling strategy
 			{
 				if (IsFirstFailue(destination))
@@ -261,6 +266,7 @@ namespace Raven.Bundles.Replication.Tasks
 				IncrementFailureCount(destination);
 				return false;
 			}
+			ResetFailureCount(destination);
 			return true;
 		}
 
@@ -277,6 +283,12 @@ namespace Raven.Bundles.Replication.Tasks
 					  RavenJObject.FromObject(failureInformation), new RavenJObject(), null);
 		}
 
+		private void ResetFailureCount(ReplicationStrategy destination)
+		{
+			docDb.Delete(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null,
+			             null);
+		}
+
 		private bool IsFirstFailue(ReplicationStrategy destination)
 		{
 			var jsonDocument = docDb.Get(ReplicationConstants.RavenReplicationDestinationsBasePath + EscapeDestinationName(destination), null);
@@ -291,10 +303,15 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				var url = destination.ConnectionStringOptions.Url + "/replication/replicateAttachments?from=" + UrlEncodedServerUrl();
+
+				var sp = Stopwatch.StartNew();
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
+
+				request.WebRequest.Headers.Add("Attachment-Ids", string.Join(", ", jsonAttachments.Select(x=>x.Value<string>("@id"))));
+
 				request.WriteBson(jsonAttachments);
 				request.ExecuteRequest();
-				log.Info("Replicated {0} attachments to {1}", jsonAttachments.Length, destination);
+				log.Info("Replicated {0} attachments to {1} in {2:#,#;;0} ms", jsonAttachments.Length, destination, sp.ElapsedMilliseconds);
 				return true;
 			}
 			catch (WebException e)
@@ -337,10 +354,13 @@ namespace Raven.Bundles.Replication.Tasks
 			{
 				log.Debug("Starting to replicate {0} documents to {1}", jsonDocuments.Length, destination);
 				var url = destination.ConnectionStringOptions.Url + "/replication/replicateDocs?from=" + UrlEncodedServerUrl();
+
+				var sp = Stopwatch.StartNew();
+
 				var request = httpRavenRequestFactory.Create(url, "POST", destination.ConnectionStringOptions);
 				request.Write(jsonDocuments);
 				request.ExecuteRequest();
-				log.Info("Replicated {0} documents to {1}", jsonDocuments.Length, destination);
+				log.Info("Replicated {0} documents to {1} in {2:#,#;;0} ms", jsonDocuments.Length, destination, sp.ElapsedMilliseconds);
 				return true;
 			}
 			catch (WebException e)
@@ -376,15 +396,28 @@ namespace Raven.Bundles.Replication.Tasks
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
-					jsonDocuments = new RavenJArray(actions.Documents.GetDocumentsAfter(destinationsReplicationInformationForSource.LastDocumentEtag, 100)
-						.Where(destination.FilterDocuments)
-						.Where(x => x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) != destinationId) // prevent replicating back to source
-						.Select(x=>
-						{
-							DocumentRetriever.EnsureIdInMetadata(x);
-							return x;
-						})
-						.Select(x => x.ToJson()));
+					var docsToReplicate =
+						actions.Documents.GetDocumentsAfter(destinationsReplicationInformationForSource.LastDocumentEtag, 100).ToList();
+					var filteredDocsToReplicate =
+						docsToReplicate.Where(document => destination.FilterDocuments(document, destinationId)).ToList();
+					
+					log.Debug(() =>
+					{
+						var diff = docsToReplicate.Except(filteredDocsToReplicate).Select(x => x.Key);
+						return string.Format("Will replicate {1} (out of {0}) {1} to replicate to {2}. [Not replicated: {3}]",
+						                     docsToReplicate.Count,
+											 filteredDocsToReplicate.Count, 
+											 destination,
+						                     string.Join(", ", diff));
+					});
+
+					jsonDocuments = new RavenJArray(filteredDocsToReplicate
+					                                	.Select(x =>
+					                                	{
+					                                		DocumentRetriever.EnsureIdInMetadata(x);
+					                                		return x;
+					                                	})
+					                                	.Select(x => x.ToJson()));
 				});
 			}
 			catch (Exception e)
@@ -400,14 +433,11 @@ namespace Raven.Bundles.Replication.Tasks
 			try
 			{
 				string destinationInstanceId = destinationsReplicationInformationForSource.ServerInstanceId.ToString();
-				
+
 				docDb.TransactionalStorage.Batch(actions =>
 				{
-					jsonAttachments = new RavenJArray(actions.Attachments.GetAttachmentsAfter(destinationsReplicationInformationForSource.LastAttachmentEtag)
-						.Where(destination.FilterAttachments)
-						// we don't replicate stuff that was created there
-						.Where(x=>x.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) != destinationInstanceId)
-						.Take(100)
+					jsonAttachments = new RavenJArray(actions.Attachments.GetAttachmentsAfter(destinationsReplicationInformationForSource.LastAttachmentEtag,100)
+						.Where(information => destination.FilterAttachments(information, destinationInstanceId))
 						.Select(x => new RavenJObject
 						{
 							{"@metadata", x.Metadata},
@@ -419,7 +449,7 @@ namespace Raven.Bundles.Replication.Tasks
 			}
 			catch (Exception e)
 			{
-				log.WarnException("Could not get documents to replicate after: " + destinationsReplicationInformationForSource.LastAttachmentEtag, e);
+				log.WarnException("Could not get attachments to replicate after: " + destinationsReplicationInformationForSource.LastAttachmentEtag, e);
 			}
 			return jsonAttachments;
 		}
@@ -428,7 +458,10 @@ namespace Raven.Bundles.Replication.Tasks
 		{
 			try
 			{
-				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl();
+				var currentEtag = Guid.Empty;
+				docDb.TransactionalStorage.Batch(accessor => currentEtag = accessor.Staleness.GetMostRecentDocumentEtag());
+				var url = destination.ConnectionStringOptions.Url + "/replication/lastEtag?from=" + UrlEncodedServerUrl() +
+				          "&currentEtag=" + currentEtag;
 				var request = httpRavenRequestFactory.Create(url, "GET", destination.ConnectionStringOptions);
 				return request.ExecuteRequest<SourceReplicationInformation>();
 			}
@@ -457,12 +490,11 @@ namespace Raven.Bundles.Replication.Tasks
 			var document = docDb.Get(ReplicationConstants.RavenReplicationDestinations, null);
 			if (document == null)
 			{
-				docDb.Put(ReplicationConstants.RavenReplicationDestinations, null, RavenJObject.FromObject(new ReplicationDocument()), new RavenJObject(), null);
-				document = docDb.Get(ReplicationConstants.RavenReplicationDestinations, null);
+				return new ReplicationStrategy[0];
 			}
 			return document.DataAsJson.JsonDeserialization<ReplicationDocument>()
 				.Destinations.Select(GetConnectionOptionsSafe)
-				.Where(x=>x!=null)
+				.Where(x => x != null)
 				.ToArray();
 		}
 
@@ -475,7 +507,7 @@ namespace Raven.Bundles.Replication.Tasks
 			catch (Exception e)
 			{
 				log.ErrorException(
-					string.Format("IGNORING BAD REPLICATION CONFIG!{0}Could not figure out connection options for [Url: {1}, ConnectionStringName: {2}]", 
+					string.Format("IGNORING BAD REPLICATION CONFIG!{0}Could not figure out connection options for [Url: {1}, ConnectionStringName: {2}]",
 					Environment.NewLine, x.Url, x.ConnectionStringName),
 					e);
 
@@ -491,7 +523,7 @@ namespace Raven.Bundles.Replication.Tasks
 				CurrentDatabaseId = docDb.TransactionalStorage.Id.ToString()
 			};
 			return string.IsNullOrEmpty(x.ConnectionStringName) ?
-				CreateReplicationStrategyFromDocument(x, replicationStrategy) : 
+				CreateReplicationStrategyFromDocument(x, replicationStrategy) :
 				CreateReplicationStrategyFromConnectionString(x, replicationStrategy);
 		}
 
@@ -522,8 +554,8 @@ namespace Raven.Bundles.Replication.Tasks
 				Url = url,
 				ApiKey = x.ApiKey,
 				Credentials = string.IsNullOrEmpty(x.Domain) ?
-				                                             	new NetworkCredential(x.Username, x.Password) :
-				                                             	                                              	new NetworkCredential(x.Username, x.Password, x.Domain),
+																new NetworkCredential(x.Username, x.Password) :
+																												new NetworkCredential(x.Username, x.Password, x.Domain),
 			};
 			return replicationStrategy;
 		}
@@ -531,36 +563,47 @@ namespace Raven.Bundles.Replication.Tasks
 
 	public class ReplicationStrategy
 	{
-		public bool FilterDocuments(JsonDocument document)
+		public bool FilterDocuments(JsonDocument document, string destinationId)
 		{
-			if(document.Key.StartsWith("Raven/") ) // don't replicate system docs
-				return false;
-			if(document.Metadata.ContainsKey(Constants.NotForReplication) && document.Metadata.Value<bool>(Constants.NotForReplication) ) // not explicitly marked to skip
+			if (document.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase)) // don't replicate system docs
+			{
+				if (document.Key.StartsWith("Raven/Hilo/", StringComparison.InvariantCultureIgnoreCase) == false) // except for hilo documents
+					return false;
+			}
+			if (document.Metadata.ContainsKey(Constants.NotForReplication) && document.Metadata.Value<bool>(Constants.NotForReplication)) // not explicitly marked to skip
 				return false;
 			if (document.Metadata[ReplicationConstants.RavenReplicationConflict] != null) // don't replicate conflicted documents, that just propagate the conflict
+				return false;
+
+			if (document.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == destinationId) // prevent replicating back to source
 				return false;
 
 			switch (ReplicationOptionsBehavior)
 			{
 				case TransitiveReplicationOptions.None:
-					return document.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == null ||
-						(document.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == CurrentDatabaseId);
+					var value = document.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource);
+					var replicateDoc = value == null || (value == CurrentDatabaseId);
+					return replicateDoc;
 			}
 			return true;
 
 		}
 
-		public bool FilterAttachments(AttachmentInformation attachment)
+		public bool FilterAttachments(AttachmentInformation attachment, string destinationInstanceId)
 		{
-			if(attachment.Key.StartsWith("Raven/",StringComparison.InvariantCultureIgnoreCase) || // don't replicate system attachments
+			if (attachment.Key.StartsWith("Raven/", StringComparison.InvariantCultureIgnoreCase) || // don't replicate system attachments
 				attachment.Key.StartsWith("transactions/recoveryInformation", StringComparison.InvariantCultureIgnoreCase)) // don't replicate transaction recovery information
 				return false;
 
 			// explicitly marked to skip
-			if(attachment.Metadata.ContainsKey(Constants.NotForReplication) && attachment.Metadata.Value<bool>(Constants.NotForReplication) )
+			if (attachment.Metadata.ContainsKey(Constants.NotForReplication) && attachment.Metadata.Value<bool>(Constants.NotForReplication))
 				return false;
 
-			if(attachment.Metadata.ContainsKey(ReplicationConstants.RavenReplicationConflict))// don't replicate conflicted documents, that just propagate the conflict
+			if (attachment.Metadata.ContainsKey(ReplicationConstants.RavenReplicationConflict))// don't replicate conflicted documents, that just propagate the conflict
+				return false;
+
+			// we don't replicate stuff that was created there
+			if (attachment.Metadata.Value<string>(ReplicationConstants.RavenReplicationSource) == destinationInstanceId)
 				return false;
 
 			switch (ReplicationOptionsBehavior)
@@ -580,7 +623,12 @@ namespace Raven.Bundles.Replication.Tasks
 
 		public override string ToString()
 		{
-			return string.Format("ReplicationOptionsBehavior: {0}, ConnectionStringOptions: {1}", ReplicationOptionsBehavior, ConnectionStringOptions);
+			return string.Join(" ", new[]
+			{
+				ConnectionStringOptions.Url,
+				ConnectionStringOptions.DefaultDatabase,
+				ConnectionStringOptions.ApiKey
+			}.Where(x => x != null));
 		}
 	}
 }

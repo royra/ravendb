@@ -23,8 +23,6 @@ namespace Raven.Client.Connection
 		/// <summary>
 		/// Escapes Lucene operators and quotes phrases
 		/// </summary>
-		/// <param name="term"></param>
-		/// <param name="allowWildcards"></param>
 		/// <returns>escaped term</returns>
 		/// <remarks>
 		/// http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Escaping%20Special%20Characters
@@ -116,7 +114,15 @@ namespace Raven.Client.Connection
 			if (buffer == null)
 			{
 				// no changes required
-				return term;
+				switch (term)
+				{
+					case "OR":
+						return "\"OR\"";
+					case "AND":
+						return "\"AND\"";
+					default:
+						return term;
+				}
 			}
 
 			if (length > start)

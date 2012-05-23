@@ -155,11 +155,18 @@ namespace Raven.Client.Silverlight.Connection.Async
 					try
 					{
 						var token = task.Result;
+						var docKey = key;
+						IList<string> list;
+						if(request.ResponseHeaders.TryGetValue(Constants.DocumentIdFieldName, out list))
+						{
+							docKey = list.FirstOrDefault() ?? key;
+							request.ResponseHeaders.Remove(Constants.DocumentIdFieldName);
+						}
 						return new JsonDocument
 						{
 							DataAsJson = (RavenJObject)token,
 							NonAuthoritativeInformation = request.ResponseStatusCode == HttpStatusCode.NonAuthoritativeInformation,
-							Key = key,
+							Key = docKey,
 							LastModified = DateTime.ParseExact(request.ResponseHeaders[Constants.LastModified].First(), "r", CultureInfo.InvariantCulture).ToLocalTime(),
 							Etag = new Guid(request.ResponseHeaders["ETag"].First()),
 							Metadata = request.ResponseHeaders.FilterHeaders(isServerDocument: false)
@@ -204,7 +211,8 @@ namespace Raven.Client.Silverlight.Connection.Async
 				throw new ConflictException("Conflict detected on " + key +
 											", conflict must be resolved before the document will be accessible")
 				{
-					ConflictedVersionIds = conflictIds
+					ConflictedVersionIds = conflictIds,
+					Etag = new Guid(httpWebResponse.Headers["ETag"])
 				};
 			}
 			return false;
@@ -316,6 +324,18 @@ namespace Raven.Client.Silverlight.Connection.Async
 				}).Unwrap();
 		}
 
+		public Task<JsonDocument[]> StartsWithAsync(string keyPrefix, int start, int pageSize)
+		{
+			var metadata = new RavenJObject();
+			var actualUrl = string.Format("{0}/docs?startsWith={1}&start={2}&pageSize={3}", url, Uri.EscapeDataString(keyPrefix), start, pageSize);
+			var request = jsonRequestFactory.CreateHttpJsonRequest(this, actualUrl, "GET", metadata, credentials, convention);
+			request.AddOperationHeaders(OperationsHeaders);
+
+			return request.ReadResponseJsonAsync()
+				.ContinueWith(task => SerializationHelper.RavenJObjectsToJsonDocuments(((RavenJArray)task.Result).OfType<RavenJObject>()).ToArray());
+	
+		}
+
 		public Task<BuildNumber> GetBuildNumber()
 		{
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, (url + "/build/version").NoCache(), "GET", credentials, convention);
@@ -341,7 +361,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
 				{
-					var json = (RavenJObject) task.Result;
+					var json = (RavenJObject)task.Result;
 					return json.JsonDeserialization<IDictionary<string, IEnumerable<FacetValue>>>();
 				});
 		}
@@ -454,7 +474,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 			var request = jsonRequestFactory.CreateHttpJsonRequest(this, path.NoCache(), "GET", credentials, convention);
 
 			return request.ReadResponseJsonAsync()
-				.ContinueWith(task => AttemptToProcessResponse(() => SerializationHelper.ToQueryResult((RavenJObject) task.Result, request.ResponseHeaders["ETag"].First())));
+				.ContinueWith(task => AttemptToProcessResponse(() => SerializationHelper.ToQueryResult((RavenJObject)task.Result, request.ResponseHeaders["ETag"].First())));
 		}
 
 		public Task DeleteByIndexAsync(string indexName, IndexQuery queryToDelete, bool allowStale)
@@ -568,7 +588,7 @@ namespace Raven.Client.Silverlight.Connection.Async
 		/// <param name="overwrite">Should overwrite index</param>
 		public Task<string> PutIndexAsync(string name, IndexDefinition indexDef, bool overwrite)
 		{
-			string requestUri = url + "/indexes/" + Uri.EscapeUriString(name) +"?definition=yes";
+			string requestUri = url + "/indexes/" + Uri.EscapeUriString(name) + "?definition=yes";
 			var webRequest = requestUri
 				.ToJsonRequest(this, credentials, convention, OperationsHeaders, "GET");
 
@@ -711,10 +731,10 @@ namespace Raven.Client.Silverlight.Connection.Async
 			return request.ReadResponseJsonAsync()
 				.ContinueWith(task =>
 				{
-					var json = (RavenJObject) task.Result;
+					var json = (RavenJObject)task.Result;
 					return new SuggestionQueryResult
 					{
-						Suggestions = ((RavenJArray) json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
+						Suggestions = ((RavenJArray)json["Suggestions"]).Select(x => x.Value<string>()).ToArray(),
 					};
 				});
 		}

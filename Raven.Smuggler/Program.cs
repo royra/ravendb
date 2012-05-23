@@ -4,9 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.IO;
 using System.Net;
 using NDesk.Options;
 using Raven.Abstractions.Data;
+using Raven.Abstractions.Smuggler;
 
 namespace Raven.Smuggler
 {
@@ -15,11 +17,13 @@ namespace Raven.Smuggler
 		private readonly RavenConnectionStringOptions connectionStringOptions;
 		private readonly SmugglerOptions options;
 		private readonly OptionSet optionSet;
+		bool incremental;
 
 		private Program()
 		{
 			connectionStringOptions = new RavenConnectionStringOptions();
 			options = new SmugglerOptions();
+
 			optionSet = new OptionSet
 			            	{
 			            		{
@@ -49,7 +53,8 @@ namespace Raven.Smuggler
 			            		{"u|user|username:", "The username to use when the database requires the client to authenticate.", value => Credentials.UserName = value},
 			            		{"p|pass|password:", "The password to use when the database requires the client to authenticate.", value => Credentials.Password = value},
 			            		{"domain:", "The domain to use when the database requires the client to authenticate.", value => Credentials.Domain = value},
-			            		{"key|api-key:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
+			            		{"key|api-key|apikey:", "The API-key to use, when using OAuth.", value => connectionStringOptions.ApiKey = value},
+								{"incremental", "States usage of incremental operations", _ => incremental = true },
 			            		{"h|?|help", v => PrintUsageAndExit(0)},
 			            	};
 		}
@@ -100,6 +105,11 @@ namespace Raven.Smuggler
 				PrintUsageAndExit(e);
 			}
 
+			if (options.File != null && Directory.Exists(options.File))
+			{
+				incremental = true;
+			}
+
 			var smugglerApi = new SmugglerApi(connectionStringOptions);
 
 			try
@@ -107,12 +117,31 @@ namespace Raven.Smuggler
 				switch (action)
 				{
 					case SmugglerAction.Import:
-						smugglerApi.ImportData(options);
+						smugglerApi.ImportData(options, incremental);
 						break;
 					case SmugglerAction.Export:
-						smugglerApi.ExportData(options);
+						smugglerApi.ExportData(options, incremental);
 						break;
 				}
+			}
+			catch (WebException e)
+			{
+				var httpWebResponse = e.Response as HttpWebResponse;
+				if (httpWebResponse == null)
+					throw;
+				Console.WriteLine("Error: " + e.Message);
+				Console.WriteLine("Http Status Code: " + httpWebResponse.StatusCode + " " + httpWebResponse.StatusDescription);
+
+				using (var reader = new StreamReader(httpWebResponse.GetResponseStream()))
+				{
+					string line;
+					while ((line = reader.ReadLine()) != null)
+					{
+						Console.WriteLine(line);
+					}
+				}
+
+				Environment.Exit((int)httpWebResponse.StatusCode);
 			}
 			catch (Exception e)
 			{

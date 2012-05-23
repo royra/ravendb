@@ -5,6 +5,11 @@ namespace Raven.Database.Indexing
 	public interface IIndexingScheduler
 	{
 		IList<IndexToWorkOn> FilterMapIndexes(IList<IndexToWorkOn> indexes);
-		int LastAmountOfItemsToIndex { get; set; }
+		void RecordAmountOfItemsToIndex(int value);
+		void RecordAmountOfItemsToReduce(int value);
+		IEnumerable<int> GetLastAmountOfItemsToIndex();
+		IEnumerable<int> GetLastAmountOfItemsToReduce();
+		int LastAmountOfItemsToIndexToRemember { get; set; }
+		int LastAmountOfItemsToReduceToRemember { get; set; }
 	}
 }

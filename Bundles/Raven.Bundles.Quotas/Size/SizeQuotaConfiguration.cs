@@ -1,11 +1,10 @@
 using System;
 using Raven.Database;
-using Raven.Database.Commercial;
 using Raven.Database.Plugins;
 using Raven.Abstractions.Extensions;
 using Raven.Json.Linq;
 
-namespace Raven.Bundles.Quotas
+namespace Raven.Bundles.Quotas.Size
 {
 	public class SizeQuotaConfiguration
 	{

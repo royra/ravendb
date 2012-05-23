@@ -4,12 +4,10 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -20,11 +18,9 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Abstractions.Extensions;
 using Raven.Abstractions.Connection;
-using Raven.Client.Connection;
 using Raven.Client.Connection.Profiling;
 using Raven.Client.Document;
 using Raven.Json.Linq;
-using Raven.Client.Extensions;
 
 namespace Raven.Client.Connection
 {
@@ -57,26 +53,23 @@ namespace Raven.Client.Connection
 		public NameValueCollection ResponseHeaders { get; set; }
 
 		internal HttpJsonRequest(
-			string url,
-			string method,
-			RavenJObject metadata,
-			ICredentials credentials,
-			HttpJsonRequestFactory factory,
-			IHoldProfilingInformation owner,
-			DocumentConvention conventions)
+			CreateHttpJsonRequestParams requestParams,
+			HttpJsonRequestFactory factory)
 		{
-			this.Url = url;
+			Url = requestParams.Url;
 			this.factory = factory;
-			this.owner = owner;
-			this.conventions = conventions;
-			this.Method = method;
-			webRequest = (HttpWebRequest)WebRequest.Create(url);
-			webRequest.Credentials = credentials;
-			webRequest.Method = method;
-			if (method == "POST" || method == "PUT" || method == "PATCH")
+			owner = requestParams.Owner;
+			conventions = requestParams.Convention;
+			Method = requestParams.Method;
+			webRequest = (HttpWebRequest)WebRequest.Create(requestParams.Url);
+			webRequest.Credentials = requestParams.Credentials;
+			webRequest.Method = requestParams.Method;
+			if (factory.DisableRequestCompression == false &&
+				(requestParams.Method == "POST" || requestParams.Method == "PUT" || requestParams.Method == "PATCH"))
 				webRequest.Headers["Content-Encoding"] = "gzip";
 			webRequest.ContentType = "application/json; charset=utf-8";
-			WriteMetadata(metadata);
+			WriteMetadata(requestParams.Metadata);
+			requestParams.UpdateHeaders(webRequest);
 		}
 
 #if !NET_3_5
@@ -197,7 +190,7 @@ namespace Raven.Client.Connection
 			{
 				try
 				{
-					if(writeCalled == false)
+					if (writeCalled == false)
 						webRequest.ContentLength = 0;
 					return ReadStringInternal(webRequest.GetResponse);
 				}
@@ -256,7 +249,7 @@ namespace Raven.Client.Connection
 
 			if (postedData != null)
 			{
-				HttpRequestHelper.WriteDataToRequest(newWebRequest, postedData);
+				HttpRequestHelper.WriteDataToRequest(newWebRequest, postedData, factory.DisableRequestCompression);
 			}
 			if (postedStream != null)
 			{
@@ -264,7 +257,10 @@ namespace Raven.Client.Connection
 				using (var stream = newWebRequest.GetRequestStream())
 				using (var commpressedData = new GZipStream(stream, CompressionMode.Compress))
 				{
-					postedStream.CopyTo(commpressedData);
+					if (factory.DisableRequestCompression == false)
+						postedStream.CopyTo(commpressedData);
+					else
+						postedStream.CopyTo(stream);
 
 					commpressedData.Flush();
 					stream.Flush();
@@ -305,7 +301,7 @@ namespace Raven.Client.Connection
 			}
 #endif
 
-			ResponseHeaders = response.Headers;
+			ResponseHeaders = new NameValueCollection(response.Headers);
 			ResponseStatusCode = ((HttpWebResponse)response).StatusCode;
 			using (var responseStream = response.GetResponseStreamWithHttpDecompression())
 			{
@@ -337,9 +333,9 @@ namespace Raven.Client.Connection
 		{
 			var httpWebResponse = e.Response as HttpWebResponse;
 			if (httpWebResponse == null ||
-			    httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
-			    httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
-			    httpWebResponse.StatusCode == HttpStatusCode.Conflict)
+				httpWebResponse.StatusCode == HttpStatusCode.Unauthorized ||
+				httpWebResponse.StatusCode == HttpStatusCode.NotFound ||
+				httpWebResponse.StatusCode == HttpStatusCode.Conflict)
 			{
 				int httpResult = -1;
 				if (httpWebResponse != null)
@@ -359,7 +355,7 @@ namespace Raven.Client.Connection
 			}
 
 			if (httpWebResponse.StatusCode == HttpStatusCode.NotModified
-			    && CachedRequestDetails != null)
+				&& CachedRequestDetails != null)
 			{
 				factory.UpdateCacheTime(this);
 				var result = factory.GetCachedResponse(this);
@@ -472,10 +468,19 @@ namespace Raven.Client.Connection
 					headerName = "If-None-Match";
 				var value = prop.Value.Value<object>().ToString();
 
+				bool isRestricted;
+				try
+				{
+					isRestricted = WebHeaderCollection.IsRestricted(headerName);
+				}
+				catch (Exception e)
+				{
+					throw new InvalidOperationException("Could not figure out how to treat header: " + headerName, e);
+				}
 				// Restricted headers require their own special treatment, otherwise an exception will
 				// be thrown.
 				// See http://msdn.microsoft.com/en-us/library/78h415ay.aspx
-				if (WebHeaderCollection.IsRestricted(headerName))
+				if (isRestricted)
 				{
 					switch (headerName)
 					{
@@ -521,7 +526,7 @@ namespace Raven.Client.Connection
 			writeCalled = true;
 			postedData = data;
 
-			HttpRequestHelper.WriteDataToRequest(webRequest, data);
+			HttpRequestHelper.WriteDataToRequest(webRequest, data, factory.DisableRequestCompression);
 		}
 
 
@@ -536,7 +541,7 @@ namespace Raven.Client.Connection
 		{
 			writeCalled = true;
 			postedData = dataToWrite;
-			
+
 			return webRequest.BeginGetRequestStream(callback, state);
 		}
 
@@ -558,29 +563,6 @@ namespace Raven.Client.Connection
 			}
 		}
 
-		/// <summary>
-		/// Adds the operation headers.
-		/// </summary>
-		/// <param name="operationsHeaders">The operations headers.</param>
-		public void AddOperationHeaders(NameValueCollection operationsHeaders)
-		{
-			foreach (string header in operationsHeaders)
-			{
-				webRequest.Headers[header] = operationsHeaders[header];
-			}
-		}
-
-		/// <summary>
-		/// Adds the operation headers.
-		/// </summary>
-		/// <param name="operationsHeaders">The operations headers.</param>
-		public void AddOperationHeaders(IDictionary<string, string> operationsHeaders)
-		{
-			foreach (var kvp in operationsHeaders)
-			{
-				webRequest.Headers[kvp.Key] = operationsHeaders[kvp.Value];
-			}
-		}
 
 		private class ImmediateCompletionResult : IAsyncResult, IDisposable
 		{
@@ -623,7 +605,6 @@ namespace Raven.Client.Connection
 					manualResetEvent.Close();
 			}
 		}
-
 
 		public RavenJToken ReadResponseJson()
 		{

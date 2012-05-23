@@ -7,6 +7,7 @@ using Raven.Database.Storage;
 using System.Linq;
 using Raven.Database.Tasks;
 using Task = Raven.Database.Tasks.Task;
+using Raven.Abstractions.Extensions;
 
 namespace Raven.Database.Indexing
 {
@@ -18,15 +19,13 @@ namespace Raven.Database.Indexing
 		protected ITransactionalStorage transactionalStorage;
 		protected int workCounter;
 		protected int lastFlushedWorkCounter;
-		protected IndexBatchSizeAutoTuner autoTuner;
+		protected BaseBatchSizeAutoTuner autoTuner;
 
 		protected AbstractIndexingExecuter(ITransactionalStorage transactionalStorage, WorkContext context, TaskScheduler scheduler)
 		{
 			this.transactionalStorage = transactionalStorage;
 			this.context = context;
 			this.scheduler = scheduler;
-
-			autoTuner = new IndexBatchSizeAutoTuner(context);
 		}
 
 		public void Execute()
@@ -40,16 +39,35 @@ namespace Raven.Database.Indexing
 				try
 				{
 					foundWork = ExecuteIndexing();
-					while(context.DoWork) // we want to drain all of the pending tasks before the next run
+					while (context.DoWork) // we want to drain all of the pending tasks before the next run
 					{
 						if (ExecuteTasks() == false)
 							break;
 						foundWork = true;
 					}
-					
+
+				}
+				catch (OutOfMemoryException oome)
+				{
+					foundWork = true;
+					HandleOutOfMemoryException(oome);
+				}
+				catch (AggregateException ae)
+				{
+					foundWork = true;
+					var oome = ae.ExtractSingleInnerException() as OutOfMemoryException;
+					if (oome == null)
+					{
+						log.ErrorException("Failed to execute indexing", ae);
+					}
+					else
+					{
+						HandleOutOfMemoryException(oome);
+					}
 				}
 				catch (Exception e)
 				{
+					foundWork = true; // we want to keep on trying, anyway, not wait for the timeout or more work
 					log.ErrorException("Failed to execute indexing", e);
 				}
 				if (foundWork == false)
@@ -62,6 +80,19 @@ namespace Raven.Database.Indexing
 					context.NotifyAboutWork();
 				}
 			}
+		}
+
+		private void HandleOutOfMemoryException(OutOfMemoryException oome)
+		{
+			log.WarnException(
+				@"Failed to execute indexing because of an out of memory exception. Will force a full GC cycle and then become more conservative with regards to memory",
+				oome);
+
+			// On the face of it, this is stupid, because OOME will not be thrown if the GC could release
+			// memory, but we are actually aware that during indexing, the GC couldn't find garbage to clean,
+			// but in here, we are AFTER the index was done, so there is likely to be a lot of garbage.
+			GC.Collect(GC.MaxGeneration);
+			autoTuner.OutOfMemoryExceptionHappened();
 		}
 
 		private bool ExecuteTasks()
@@ -126,8 +157,9 @@ namespace Raven.Database.Indexing
 			if (indexesToWorkOn.Count == 0)
 				return false;
 
-			ExecuteIndxingWork(indexesToWorkOn);
-			
+			using(context.IndexDefinitionStorage.CurrentlyIndexing())
+				ExecuteIndexingWork(indexesToWorkOn);
+
 			return true;
 		}
 
@@ -135,7 +167,7 @@ namespace Raven.Database.Indexing
 
 		protected abstract bool IsIndexStale(IndexStats indexesStat, IStorageActionsAccessor actions);
 
-		protected abstract void ExecuteIndxingWork(IList<IndexToWorkOn> indexesToWorkOn);
+		protected abstract void ExecuteIndexingWork(IList<IndexToWorkOn> indexesToWorkOn);
 
 		protected abstract bool IsValidIndex(IndexStats indexesStat);
 

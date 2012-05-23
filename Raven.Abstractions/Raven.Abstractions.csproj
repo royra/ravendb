@@ -104,6 +104,7 @@
     <Compile Include="Data\SuggestionQueryResult.cs" />
     <Compile Include="Data\TransactionInformation.cs" />
     <Compile Include="Data\TransactionMode.cs" />
+    <Compile Include="Extensions\ExceptionExtensions.cs" />
     <Compile Include="Exceptions\ConcurrencyException.cs" />
     <Compile Include="Extensions\Buffers.cs" />
     <Compile Include="Extensions\ConcurrentDictionaryExtensions.cs" />
@@ -157,6 +158,11 @@
     <Compile Include="Indexing\SortOptions.cs" />
     <Compile Include="Replication\ReplicationDestination.cs" />
     <Compile Include="Replication\ReplicationDocument.cs" />
+    <Compile Include="Smuggler\ISmugglerApi.cs" />
+    <Compile Include="Smuggler\SmugglerAction.cs" />
+    <Compile Include="Smuggler\SmugglerApiBase.cs" />
+    <Compile Include="Smuggler\SmugglerOptions.cs" />
+    <Compile Include="Smuggler\TrivialJsonToJsonJsonConverter.cs" />
     <Compile Include="SystemTime.cs" />
   </ItemGroup>
   <ItemGroup>
