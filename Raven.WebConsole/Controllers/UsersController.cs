@@ -71,21 +71,37 @@ namespace Raven.WebConsole.Controllers
             if (!ValidateNameJson(model.Name).Equals(true))
                 return RedirectToAction("Index");
 
-            using (var session = store.OpenSession())
+            session.Store(new AuthenticationUser
             {
-                session.Store(new AuthenticationUser
-                {
-                    Id = string.Format("Users/{0}", model.Name),
-                    Admin = model.IsAdmin,
-                    AllowedDatabases = new[] { "*" },
-                    Name = model.Name,
-                }.SetPassword(model.Password));
-
-                session.SaveChanges();
-            }
+                Id = string.Format("Users/{0}", model.Name),
+                Admin = model.IsAdmin,
+                AllowedDatabases = new[] { "*" },
+                Name = model.Name,
+            }.SetPassword(model.Password));
 
             return RedirectToAction("Index");
         }
 
+        [HttpPost]
+        public ActionResult SetPassword(string name, string password)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("user should not be empty");
+
+            if (string.IsNullOrWhiteSpace(password))
+                throw new ArgumentException("password should not be empty");
+
+            if (password.Length < 5)
+                throw new ArgumentException("password should be 5 or more characters");
+
+            var user = RavenSession.Query<AuthenticationUser>().SingleOrDefault(u => u.Name == name || u.Id == name);
+
+            if (user == null)
+                throw new Exception(string.Format("No such user '{0}'", name));
+
+            user.SetPassword(password);
+
+            return new EmptyResult();
+        }
     }
 }
