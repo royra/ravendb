@@ -1533,11 +1533,16 @@ ul.flach.db>li {
     display: inline-block;
 }
 
-ul.flach.user>li {
-    height: 80px;
+ul.flach.db>li:nth-child(2n+1) {
+    margin-right: 50px;
 }
 
-ul.flach.db>li:nth-child(2n+1) {
+ul.flach.user>li {
+    height: 100px;
+    display: inline-block;
+}
+
+ul.flach.user>li:nth-child(2n+1) {
     margin-right: 50px;
 }
 
@@ -1571,6 +1576,10 @@ ul.flach ul.props {
     display: inline-block;
     width: 180px;
     color: #555555;
+}
+
+ul.flach ul.props>li {
+    margin-bottom: 4px;
 }
 
 ul.flach ul.props .name {
@@ -1607,6 +1616,15 @@ ul.flach>li:hover ul.buttons .button {
 ul.flach ul.buttons li {
     float: left;
     margin: 0 5px;
+}
+
+ul.flach li .props .changeable:hover {
+    color: #9a002b;
+    cursor: pointer;
+} 
+
+ul.flach li .props .changeable:hover span {
+    text-decoration: underline;
 }
 
 /*
@@ -1665,5 +1683,6 @@ ul.flach ul.buttons li {
 
 label.error {
     color: #9d2144;
-    margin-left: 15px;
+    margin-left: 10px;
 }
+

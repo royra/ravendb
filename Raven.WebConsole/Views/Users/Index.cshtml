@@ -9,22 +9,28 @@
     <h1 style="float:left;">@ViewBag.Title</h1>
     <a id="newButton" class="button" style="float:right;" href="javascript:void(0);">Create a new user</a>
     <div style="float:none;clear:both"></div>
-<div/>
+</div>
 
 <ul class="flach user">
     @foreach (var user in Model.Users)
     {
-        <li>
+        <li class="user" data-user="@user.Name">
             <span class="name">@user.Name</span>
             <ul class="props">
+                <li class="admin changeable">
+                    <span class="name">Admin:</span><span class="value" data-is-admin="@Json.Encode(user.IsAdmin)">@(user.IsAdmin ? "Yes" : "No")</span>
+                </li>
                 <li>
-                    <span class="name">Admin:</span><span class="value">@(user.IsAdmin ? "Yes" : "No")</span>
+                    <span class="name">Allowed DBs:</span><span class="value">@string.Join(", ", user.AllowedDatabases)</span>
                 </li>
             </ul>
             <ul class="buttons">
                 <li>
                     <a class="delete button" href="javascript:void(0);">Delete</a>
                     <form style="display: none" action="@Url.Action("Delete", new {name=user.Name})" method="post"></form>
+                </li>
+                <li>
+                    <a class="button setPasswordButton" href="javascript:void(0);">Set Password</a>
                 </li>
             </ul>
         </li>
@@ -35,16 +41,45 @@
     <form action="@Url.Action("New")" method="post" style="margin-top: 20px; margin-bottom: 20px">
         <fieldset>
             <legend></legend>
-            <label for="name">Name: </label>
-            <input type="text" name="name" />
-            <br/>
-            <label for="name">Admin: </label>
-            <input type="checkbox" name="isAdmin" />
-            <br/>
-            <label for="name">Password: </label>
-            <input type="password" name="password" />
+            <table>
+                <tr>
+                    <td><label for="name">Name: </label></td>
+                    <td><input type="text" name="name" /></td>
+                </tr>
+                <tr>
+                    <td><label for="name">Password: </label></td>
+                    <td><input type="password" id="newUserPassword" name="password" /></td>
+                </tr>
+                <tr>
+                    <td><label for="name">Repeat password: </label></td>
+                    <td><input type="password" name="repeatPassword" /></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><input type="checkbox" name="isAdmin" /><label for="name">Create as admin</label></td>
+                </tr>
+            </table>
         </fieldset>
     </form>
+</div>
+
+<div id="setPasswordDialog">
+    <form class="setPassword" action="@Url.Action("SetPassword")" method="post">
+        <fieldset>
+            <legend></legend>
+            <table>
+                <tr>
+                    <td><label for="password">Password:</label></td>
+                    <td><input type="password" id="setPasswordPassword" name="password"/></td>
+                </tr>    
+                <tr>
+                    <td><label for="repeatPassword">Repeat password:</label></td>
+                    <td><input type="password" name="repeatPassword"/></td>
+                </tr>    
+            </table>
+            <input type="hidden" name="name"/>
+        </fieldset>
+    </form>    
 </div>
 
 <script type="text/javascript">
@@ -60,36 +95,128 @@
                 return true;
             })
             .button({ icons: { primary: 'ui-icon-trash'} });
+
+        $('.setPasswordButton').button({ icons: { primary: 'ui-icon-locked' } });
+
+        $('#setPasswordDialog form')
+            .ajaxForm({
+                clearForm: true,
+                beforeSubmit: function (vals, form) {
+                    return form.valid();
+                },
+                success: function() {
+                    alert('The password has been set');
+                }
+            })
+            .validate({
+                rules: {
+                    password: {
+                        required: true,
+                        minlength: 5
+                    },
+                    repeatPassword: {
+                        required: true,
+                        equalTo: '#setPasswordPassword'
+                    }
+                },
+                messages: {
+                    repeatPassword: {
+                        equalTo: "Passwords must match"
+                    }
+                },
+                submitHandler: function (form) {
+                    $('#setPasswordDialog').dialog('close');
+                    $(form).ajaxSubmit();
+                }
+            });
+
+        $('#setPasswordDialog')
+            .dialog({
+                autoOpen: false,
+                modal: true,
+                width: 550,
+                buttons: {
+                    "Set Password": function() {
+                        $(this).find('form').submit();
+                    },
+                    "Cancel": function() {
+                        $(this).dialog('close');
+                    }
+                }
+            })
+            .bindEnter();
+        
+        $('.setPasswordButton').on('click', function() {
+            var user = $(this).parents('li.user').data('user');
+            $('#setPasswordDialog')
+                .dialog('option', 'title', $.format('Set the password for {0}', user))
+                .dialog('open')
+                .find('input[name=name]').val(user);
+        });
         
         $('#newDialog form').validate({
             rules: {
                 name: {
                     required: true,
                     minlength: 3,
-                    remote: {url: "@Url.Action("ValidateName")", cache: false}
+                    remote: {url: "@Url.Action("ValidateName")"}
                 },
                 password: {
                     required: true,
                     minlength: 5
+                },
+                repeatPassword: {
+                    required: true,
+                    equalTo: '#newUserPassword'
+                }
+            },
+            messages: {
+                repeatPassword: {
+                    equalTo: "Passwords must match"
                 }
             }
         });
         
-        $('#newDialog').dialog({
-            autoOpen: false,
-            modal: true,
-            title: "Create a new database",
-            width: 500,
-            buttons: {
-                "Create": function () {
-                    $(this).find('form').submit();
-                },
-                "Cancel": function () {
-                    $(this).dialog('close');
+        $('#newDialog')
+            .bindEnter()
+            .dialog({
+                autoOpen: false,
+                modal: true,
+                title: "Create a new user",
+                width: 500,
+                buttons: {
+                    "Create": function () {
+                        $(this).find('form').submit();
+                    },
+                    "Cancel": function () {
+                        $(this).dialog('close');
+                    }
                 }
-            }
-        });
+            });
 
         $('#newButton').on('click', function () { $('#newDialog').dialog('open'); });
+
+        $('.admin').on('click', function() {
+            var renderBool = function(b) {
+                return b ? "Yes" : "No";
+            };
+
+            var value = $(this).find('.value');
+            var isAdmin = JSON.parse(value.data('is-admin'));
+
+            var user = $(this).parents('.user').data('user');
+            $.post(
+                "@Url.Action("SetAdmin")",
+                {
+                    name: user,
+                    isAdmin: !isAdmin
+                },
+                function() {
+                    value.text(renderBool(!isAdmin));
+                    value.data('is-admin', JSON.stringify(!isAdmin));
+                    value.parent().effect('highlight');
+                }
+            );
+        });
     });
 </script>

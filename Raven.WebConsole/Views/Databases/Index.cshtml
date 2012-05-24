@@ -16,7 +16,7 @@
     @foreach (var db in Model.Databases)
     {
         <li>
-            <a class="name" title="Click to open studio" href="@(Model.BaseUrl)/raven/studio.html#/home?database=@db.Name">@db.Name</a>
+            <a class="name link-on-hover" title="Click to open studio" href="@(Model.BaseUrl)/raven/studio.html#/home?database=@db.Name">@db.Name</a>
             <ul class="props">
                 <li>
                     <span class="name">Size:</span><span class="value">@db.SizeMb MB</span>

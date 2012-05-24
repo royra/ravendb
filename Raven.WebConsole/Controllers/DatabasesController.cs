@@ -30,6 +30,7 @@ namespace Raven.WebConsole.Controllers
             var baseUrl = store.Url;
 
             var databases = DatabaseCommands.GetDatabaseNames(1000)
+                .OrderBy(n => n)
                 .Select(delegate(string dbName)
                             {
                                 var dbUrl = string.Format("{0}/databases/{1}", baseUrl, dbName);
