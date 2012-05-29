@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Web.Mvc;
@@ -16,13 +17,11 @@ namespace Raven.WebConsole.Controllers
     {
         private readonly IDocumentStore store;
         private readonly IWebClient webClient;
-        private readonly IDocumentSession session;
 
-        public DatabasesController(IDocumentStore store, IWebClient webClient, IDocumentSession session)
+        public DatabasesController(IDocumentStore store, IWebClient webClient)
         {
             this.store = store;
             this.webClient = webClient;
-            this.session = session;
         }
 
         public override ActionResult Index()
@@ -72,6 +71,7 @@ namespace Raven.WebConsole.Controllers
 
             DatabaseCommands.EnsureDatabaseExists(name);
 
+            SetMessage(string.Format("Created database '{0}'", name));
             return RedirectToAction("Index");
         }
 
@@ -84,6 +84,7 @@ namespace Raven.WebConsole.Controllers
         public ActionResult Delete(string name)
         {
             DatabaseCommands.Delete(string.Format("Raven/Databases/{0}", name), null);
+            SetMessage(string.Format("Database '{0}' was deleted", name));
             return RedirectToAction("Index");
         }
 
@@ -103,6 +104,38 @@ namespace Raven.WebConsole.Controllers
                 return "Already exists";
 
             return true;
+        }
+
+        [HttpPost]
+        public ActionResult Backup(string name, string path)
+        {
+            if (name == null) throw new ArgumentNullException("name");
+            if (path == null) throw new ArgumentNullException("path");
+
+            var validation = PathExists(path);
+            if (!validation.IsValid)
+                throw new ClientVisibleException {ClientVisibleMessage = validation.ErrorMessage};
+            
+            var url = string.Format("{0}/databases/admin/backup", store.Url);
+            var json = new {BackupLocation = path};
+            webClient.PostJson(url, json);
+
+            return new EmptyResult();
+        }
+
+        public JQueryValidateRemoteResult PathExists(string path)
+        {
+            if (path == null) throw new ArgumentNullException("path");
+
+            if (!Path.IsPathRooted(path))
+                return new JQueryValidateRemoteResult("Enter an absolute path");
+
+            var directoryName = Path.GetDirectoryName(path.TrimEnd('\\'));
+
+            if (!Directory.Exists(path) && (directoryName == null || !Directory.Exists(directoryName)))
+                return new JQueryValidateRemoteResult("No such directory");
+
+            return new JQueryValidateRemoteResult();
         }
     }
 }

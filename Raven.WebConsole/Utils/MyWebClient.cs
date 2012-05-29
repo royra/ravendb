@@ -8,6 +8,7 @@ namespace Raven.WebConsole.Utils
     {
         dynamic GetDynamicJson(string url);
         T GetJson<T>(string url);
+        dynamic PostJson(string url, object json);
     }
 
     public class MyWebClient : IWebClient
@@ -26,6 +27,12 @@ namespace Raven.WebConsole.Utils
         public dynamic GetDynamicJson(string url)
         {
             return JObject.Parse(GetString(url));
+        }
+
+        public dynamic PostJson(string url, object json)
+        {
+            using (var webClient = new WebClient())
+                return JObject.Parse(webClient.UploadString(url, JsonConvert.SerializeObject(json)));
         }
     }
 }

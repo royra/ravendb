@@ -1,4 +1,5 @@
-﻿@model Raven.WebConsole.ViewModels.UsersViewModel
+﻿@using Raven.WebConsole.Controllers
+@model Raven.WebConsole.ViewModels.UsersViewModel
 
 @{
     ViewBag.Title = "Users";
@@ -38,7 +39,7 @@
 </ul>
 
 <div id="newDialog">
-    <form action="@Url.Action("New")" method="post" style="margin-top: 20px; margin-bottom: 20px">
+    <form action="@Url.Action("New")" method="post">
         <fieldset>
             <legend></legend>
             <table>
@@ -85,16 +86,31 @@
 <script type="text/javascript">
     $(document).ready(function () {
         $('#newButton').button({ icons: { primary: 'ui-icon-plus'} });
+        
         $('.button.delete')
-            .on('click', function() {
-                if (!confirm("Are you sure?")) {
+            .on('click', function(e) {
+                var button = $(e.target);
+                if (button.button('option', 'disabled')) {
+                    return false;
+                }
+
+                var user = button.parents('li.user').data('user');
+                if (!confirm($.format("About to delete user {0}.\nAre you sure?", user))) {
                     return false;
                 }
 
                 $(this).parent().find('form').submit();
+                
                 return true;
             })
-            .button({ icons: { primary: 'ui-icon-trash'} });
+            .button({
+                icons: { primary: 'ui-icon-trash' },
+                disabled: $('li.user').length < 2
+            });
+
+        $('li.user[data-user=@ViewBag.User] .button.delete')
+            .attr('title', 'Cannot delete yourself')
+            .button({disabled: true});
 
         $('.setPasswordButton').button({ icons: { primary: 'ui-icon-locked' } });
 
@@ -104,15 +120,16 @@
                 beforeSubmit: function (vals, form) {
                     return form.valid();
                 },
-                success: function() {
-                    alert('The password has been set');
+                success: function(responseText, statusText, xhr, form) {
+                    var user = form.find('input[name=name]').val();
+                    raven.ui.displayMessage($.format('The password for {0} has been set', user));
                 }
             })
             .validate({
                 rules: {
                     password: {
                         required: true,
-                        minlength: 5
+                        minlength: @UsersController.NewUserModel.MIN_PASSWORD_LEN
                     },
                     repeatPassword: {
                         required: true,
@@ -163,7 +180,7 @@
                 },
                 password: {
                     required: true,
-                    minlength: 5
+                    minlength: @UsersController.NewUserModel.MIN_PASSWORD_LEN
                 },
                 repeatPassword: {
                     required: true,
@@ -196,27 +213,29 @@
 
         $('#newButton').on('click', function () { $('#newDialog').dialog('open'); });
 
-        $('.admin').on('click', function() {
-            var renderBool = function(b) {
-                return b ? "Yes" : "No";
-            };
+        $('.admin')
+            .attr('title', 'Click to toggle')
+            .on('click', function() {
+                var renderBool = function(b) {
+                    return b ? "Yes" : "No";
+                };
 
-            var value = $(this).find('.value');
-            var isAdmin = JSON.parse(value.data('is-admin'));
+                var value = $(this).find('.value');
+                var isAdmin = JSON.parse(value.data('is-admin'));
 
-            var user = $(this).parents('.user').data('user');
-            $.post(
-                "@Url.Action("SetAdmin")",
-                {
-                    name: user,
-                    isAdmin: !isAdmin
-                },
-                function() {
-                    value.text(renderBool(!isAdmin));
-                    value.data('is-admin', JSON.stringify(!isAdmin));
-                    value.parent().effect('highlight');
-                }
-            );
-        });
+                var user = $(this).parents('.user').data('user');
+                $.post(
+                    "@Url.Action("SetAdmin")",
+                    {
+                        name: user,
+                        isAdmin: !isAdmin
+                    },
+                    function() {
+                        value.text(renderBool(!isAdmin));
+                        value.data('is-admin', JSON.stringify(!isAdmin));
+                        value.parent().effect('highlight');
+                    }
+                );
+            });
     });
 </script>

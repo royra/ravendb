@@ -72,11 +72,15 @@
     <Reference Include="System.Web.Services" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClientVisibleException.cs" />
     <Compile Include="Controllers\BaseController.cs" />
     <Compile Include="Controllers\BundlesController.cs" />
     <Compile Include="Controllers\ContentController.cs" />
     <Compile Include="Controllers\DatabasesController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
+    <Compile Include="HandleClientVisibleExceptionAttribute.cs" />
+    <Compile Include="JQueryValidateRemoteResult.cs" />
+    <Compile Include="Keys.cs" />
     <Compile Include="ViewModels\UsersViewModel.cs" />
     <Compile Include="Utils\DecimalExtensions.cs" />
     <Compile Include="Utils\MyWebClient.cs" />
@@ -193,6 +197,7 @@
     <Content Include="Scripts\jquery-1.7.2.min.js" />
     <Content Include="Scripts\jquery-ui-1.8.19.js" />
     <Content Include="Scripts\jquery-ui-1.8.19.min.js" />
+    <Content Include="Scripts\jquery.cookie.1fa4a1807.js" />
     <Content Include="Scripts\jquery.form.3.09.js" />
     <Content Include="Scripts\jquery.validate-vsdoc.js" />
     <Content Include="Scripts\jquery.validate.js" />
@@ -278,7 +283,7 @@
         <WebProjectProperties>
           <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>41164</DevelopmentServerPort>
+          <DevelopmentServerPort>35948</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>
           </IISUrl>

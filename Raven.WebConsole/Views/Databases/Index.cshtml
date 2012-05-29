@@ -15,7 +15,7 @@
 <ul class="flach db">
     @foreach (var db in Model.Databases)
     {
-        <li>
+        <li class="db" data-db="@db.Name">
             <a class="name link-on-hover" title="Click to open studio" href="@(Model.BaseUrl)/raven/studio.html#/home?database=@db.Name">@db.Name</a>
             <ul class="props">
                 <li>
@@ -67,12 +67,31 @@
     </form>
 </div>
 
+<div id="backupDialog">
+    <form action="@Url.Action("Backup")" method="post" style="margin-top: 20px; margin-bottom: 20px" onsubmit="return false">
+        <fieldset>
+            <legend></legend>
+            <table>
+                <tr>
+                    <td><label for="path">Path: </label></td>
+                    <td><input type="text" name="path" /></td>
+                </tr>
+            </table>
+            <input type="hidden" name="name"/>
+        </fieldset>
+    </form>
+</div>
+
 <script type="text/javascript">
     $(document).ready(function () {
+
         $('#newButton').button({ icons: { primary: 'ui-icon-plus'} });
         $('.button.delete')
-            .on('click', function() {
-                if (!confirm("Are you sure?")) {
+            .on('click', function(e) {
+                var button = $(e.target);
+
+                var db = button.parents('li.db').data('db');
+                if (!confirm($.format("About to delete database {0}.\nAre you sure?", db))) {
                     return false;
                 }
 
@@ -80,11 +99,60 @@
                 return true;
             })
             .button({ icons: { primary: 'ui-icon-trash'} });
-        $('.button.restore').button({ icons: { primary: 'rd-icon-restore'} });
-        $('.button.backup').button({ icons: { primary: 'rd-icon-backup'} });
-
-
         
+        $('.button.restore')
+            .button({ icons: { primary: 'rd-icon-restore'} });
+        
+        $('.button.backup')
+            .button({ icons: { primary: 'rd-icon-backup'} })
+            .on('click', function (e) {
+                var db = $(e.target).parents('.db').data('db');
+                var dialog = $('#backupDialog');
+                dialog.find('input[name=name]').val(db);
+                dialog.dialog('open');
+            });
+
+        $('#backupDialog form')
+            .ajaxForm({
+                beforeSubmit: function (vals, form) {
+                    return form.valid();
+                },
+                success: function(responseText, statusText, xhr, form) {
+                    var db = form.find('input[name=name]').val();
+                    raven.ui.displayMessage($.format('Backup for database {0} has started', db));
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    raven.ui.displayMessage($.format('There was an error backing up the database: {0}', errorThrown), 'warning');
+                }
+            })
+            .validate({
+                rules: {
+                    path: {
+                        required: true,
+                        remote: "@Url.Action("PathExists")"
+                    }
+                },
+                submitHandler: function (form) {
+                    $('#backupDialog').dialog('close');
+                    $(form).ajaxSubmit();
+                }
+        });
+
+        $('#backupDialog').dialog({
+            autoOpen: false,
+            modal: true,
+            title: 'Backup database',
+            width: 400,
+            buttons: {
+                'Start Backup': function () {
+                    $(this).find('form').submit();
+                },
+                'Cancel': function () {
+                    $(this).dialog('close');
+                }
+            }
+        });
+
         $('#newDialog form').validate({
             rules: {
                 name: {
@@ -111,5 +179,6 @@
         });
 
         $('#newButton').on('click', function () { $('#newDialog').dialog('open'); });
+        
     });
 </script>

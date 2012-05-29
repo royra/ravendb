@@ -34,27 +34,33 @@ namespace Raven.WebConsole.Controllers
                 .FirstOrDefault(u => u.Name == name);
 
             if (ravenUser != null)
-                session.Delete(ravenUser);
+            {
+                var ravenUserCount = RavenSession.Query<AuthenticationUser>().Count();
+                if (ravenUserCount == 1)
+                    SetMessage("Cannot delete the only user", MessageLevel.Note);
+                else
+                {
+                    session.Delete(ravenUser);
+                    SetMessage(string.Format("Deleted user '{0}'", name));
+                }
+            }
+            else 
+                SetMessage(string.Format("Could not find user '{0}'", name), MessageLevel.Note);
 
             return RedirectToAction("Index");
         }
 
-        public ActionResult ValidateName(string name)
-        {
-            return new JsonResult { Data = ValidateNameJson(name), JsonRequestBehavior = JsonRequestBehavior.AllowGet };
-        }
-
-        private object ValidateNameJson(string name)
+        public JQueryValidateRemoteResult ValidateName(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
-                return "*";
+                return new JQueryValidateRemoteResult("*");
 
             var existingUser = RavenSession.Query<AuthenticationUser>().FirstOrDefault(u => u.Name == name);
 
             if (existingUser != null)
-                return "Already exists";
+                return new JQueryValidateRemoteResult("Already exists");
 
-            return true;
+            return new JQueryValidateRemoteResult();
         }
 
         public class NewUserModel
@@ -62,12 +68,19 @@ namespace Raven.WebConsole.Controllers
             public string Name { get; set; }
             public bool IsAdmin { get; set; }
             public string Password { get; set; }
+
+            public const int MIN_PASSWORD_LEN = 5;
         }
 
         public ActionResult New(NewUserModel model)
         {
-            if (!ValidateNameJson(model.Name).Equals(true))
+            var validationResult = ValidateName(model.Name);
+
+            if (!validationResult.IsValid)
+            {
+                SetMessage(string.Format("Failed to create the new user: {0}", validationResult.ErrorMessage), MessageLevel.Note);
                 return RedirectToAction("Index");
+            }
 
             session.Store(new AuthenticationUser
             {
@@ -77,6 +90,7 @@ namespace Raven.WebConsole.Controllers
                 Name = model.Name,
             }.SetPassword(model.Password));
 
+            SetMessage(string.Format("Created user '{0}'", model.Name));
             return RedirectToAction("Index");
         }
 

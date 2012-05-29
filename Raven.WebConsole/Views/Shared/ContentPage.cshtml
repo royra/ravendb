@@ -1,4 +1,5 @@
 ﻿@using System.Linq.Expressions
+@using Raven.WebConsole
 @using Raven.WebConsole.Controllers
 @{
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -7,6 +8,36 @@
 @section LoggedInUser {
     <div class="login-box registered">Hello @ViewBag.User | @Html.ActionLink("Logout", "Logout", "Home")</div>
 }
+
+<script type="text/javascript">
+    var raven = raven || {};
+    raven.ui = raven.ui || {};
+
+    raven.ui.displayMessage = function (text, level, hidePrevious) {
+        level = level || 'info';
+        hidePrevious = hidePrevious || true;
+
+        if (hidePrevious) {
+            raven.ui.removeMessage(false);
+        }
+
+        var messageDiv = $('<div/>').html($('<span/>').html(text)).addClass(level + '-block').addClass('message').addClass('block');
+        $('#content').prepend(messageDiv);
+    };
+
+    raven.ui.removeMessage = function (animate) {
+        animate = animate || true;
+        var messageDiv = $('#content .message.block');
+
+        if (animate) {
+            messageDiv.slideUp('fast', function () { messageDiv.remove(); });
+        } else {
+            messageDiv.remove();
+        }
+
+    };    
+
+</script>
 
 <nav id="main-nav">
 	<ul id="nav">
@@ -35,9 +66,21 @@
         
 	</ul>
 </nav>
+
 <div class="col-set">
     <div id="content">
+        @if (ViewBag.Message != null)
+        {
+            var messageLevel = ViewBag.MessageLevel as string;
+            messageLevel = (messageLevel ?? "info").ToLower();
+
+            <div class="message block @messageLevel-block">
+                <span>@ViewBag.Message</span>
+            </div>
+        }
+
         @RenderBody()
     </div>
+
 </div>
 

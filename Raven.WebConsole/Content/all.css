@@ -1027,7 +1027,8 @@ strong.main-title{display:block;}
 .post-list .box time { display:inline;}
 .col-set {
 	width:100%;
-	padding:44px 0;
+    padding-bottom: 22px;
+    padding-top: 22px;
 }
 .col-set:after {
 	display:block;
