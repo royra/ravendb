@@ -9,6 +9,10 @@
     <div class="login-box registered">Hello @ViewBag.User | @Html.ActionLink("Logout", "Logout", "Home")</div>
 }
 
+@section head {
+    @RenderSection("head", false)
+}
+
 <script type="text/javascript">
     var raven = raven || {};
     raven.ui = raven.ui || {};

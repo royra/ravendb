@@ -1,9 +1,27 @@
-﻿@using Raven.WebConsole.Controllers
+﻿@using Raven.WebConsole
+@using Raven.WebConsole.Controllers
 @model Raven.WebConsole.ViewModels.UsersViewModel
 
 @{
     ViewBag.Title = "Users";
     Layout = "../Shared/ContentPage.cshtml";
+}
+
+@section head {
+    <style type="text/css">
+        #dbAccessTypes .dbAccessType {
+            line-height: 2.2em;
+        }
+        #dbAccessTypes .dbAccessType input{
+            margin-top: -1px;
+        }
+        #dbPerms input[type=checkbox] {
+            margin-top: -1px;
+            width: 50px;
+        }
+    </style>
+
+    <script src="@Url.Content("~/Scripts/mustache.js")" type="text/javascript"></script>
 }
 
 <div class="head">
@@ -21,8 +39,8 @@
                 <li class="admin changeable">
                     <span class="name">Admin:</span><span class="value" data-is-admin="@Json.Encode(user.IsAdmin)">@(user.IsAdmin ? "Yes" : "No")</span>
                 </li>
-                <li>
-                    <span class="name">Allowed DBs:</span><span class="value">@string.Join(", ", user.AllowedDatabases)</span>
+                <li class="dbAccess changeable">
+                    <span class="name">Allowed DBs:</span><span class="value">@(user.AccessToAllDatabases ? "(all)" : string.Join(", ", user.Databases.Select(d => d.Name)))</span>
                 </li>
             </ul>
             <ul class="buttons">
@@ -38,7 +56,7 @@
     }
 </ul>
 
-<div id="newDialog">
+<div id="newDialog" style="display: none">
     <form action="@Url.Action("New")" method="post">
         <fieldset>
             <legend></legend>
@@ -64,7 +82,7 @@
     </form>
 </div>
 
-<div id="setPasswordDialog">
+<div id="setPasswordDialog" style="display: none">
     <form class="setPassword" action="@Url.Action("SetPassword")" method="post">
         <fieldset>
             <legend></legend>
@@ -83,8 +101,193 @@
     </form>    
 </div>
 
+<div id="dbAccessDialog" style="display: none">
+    <div id="dbAccessTypes">
+        <div class="dbAccessType">
+            <input type="radio" name="AccessType" value="All" id="accessType_all"/>
+            <label for="accessType_all">All databases</label>
+        </div>
+        <div class="dbAccessType">
+            <input type="radio" name="AccessType" value="Advanced" id="accessType_advanced"/>
+            <label for="accessType_advanced">Advanced</label>
+        </div>
+    </div>
+
+    <form action="@Url.Action("SetDatabasePermissionsToAll")" method="post" style="display:none" id="dbPermsAllForm">
+        <input type="hidden" name="name"/>
+    </form>
+
+    <div id="dbAccessAdvanced" style="display: none"></div>
+</div>
+
+@using (Html.BeginHtmlTemplate("dbAccessAdvancedTemplate")) {
+    <form action="@Url.Action("SetDatabasePermissions")" method="post" id="dbPermsAdvancedForm">
+        <input type="hidden" name="name"/>
+        <fieldset>
+            <legend></legend>
+            <table id="dbPerms">
+                {{#perms}}
+                    <tr class="perm" data-db="{{name}}" >
+                        <td class="name">
+                            {{name}}
+                        </td>
+                        <td>
+                            <input type="hidden" name="perms.Name" value="{{name}}"/>
+                            <input type="checkbox" name="perms.IsAdmin" id="{{name}}_IsAdmin" {{#isAdmin}}checked="checked"{{/isAdmin}}/><label for="{{name}}_IsAdmin">Admin</label>
+                            <input type="checkbox" name="perms.IsReadOnly" id="{{name}}_IsReadOnly" {{#isReadOnly}}checked="checked"{{/isReadOnly}}/><label for="{{name}}_IsReadOnly">Read-only</label>
+                            <a href="javascript:void(0);" class="removePermissionButton">Remove</a>
+                        </td>
+                    </tr>
+                {{/perms}}
+                {{#hasAddButton}}
+                    {{> addButton}}
+                {{/hasAddButton}}
+            </table>
+        </fieldset>
+    </form>
+}
+
+@using (Html.BeginHtmlTemplate("dbAddPermTemplate")) {
+                    <tr class="addPerm">
+                        <td colspan="2"><a href="javascript:void(0);" id="addPermissionButton">Add</a></td>
+                    </tr>
+}
+
+
+@using (Html.BeginHtmlTemplate("dbAddPermDialogTemplate"))
+{
+    <tr class="addPerm">
+        <td>
+            <select name="name">
+                {{#dbs}}
+                    <option value="{{.}}">{{.}}</option>
+                {{/dbs}}
+            </select>
+        </td>
+        <td>
+            <input type="checkbox" name="IsAdmin" id="new__IsAdmin"/><label for="new__IsAdmin">Admin</label>
+            <input type="checkbox" name="IsReadOnly" id="new__IsReadOnly"/><label for="new__IsReadOnly">Read-only</label>
+            <a href="javascript:void(0);" id="addPermissionDoneButton"></a>
+        </td>
+    </tr>
+}
+
 <script type="text/javascript">
+    var usersData = @Html.Raw(Json.Encode(Model.Users));
+    var getUserData = function(userName) {
+        var userData = $.grep(usersData, function(u) { return u.Name == userName; })[0];
+        return $.extend(true, { }, userData);
+    };
+
+    var setActiveDbAccessType = function() {
+        var advanced = $('#dbAccessAdvanced');
+        if ($('#dbAccessDialog input[name=AccessType]:checked').val() == 'All') {
+            advanced.hide(); 
+        } else {
+            advanced.show(); 
+        }
+    };
+    
+    var availableDbs = [];
+
+    var populateDbAccessDialogForUserName = function(userName) {
+        var dialog = $('#dbAccessDialog');
+        var userData = getUserData(userName);
+        if (userData === null) {
+            throw new Error('Cannot find user ' + userName);
+        }
+
+        var populateDbAccessDialogForUser = function() {
+            var userHasDbs = userData.AccessToAllDatabases
+                ? availableDbs
+                : $.map(userData.Databases, function(d) { return d.Name; });
+
+            var userAvailableDbs = $.grep(availableDbs, function(d) { return $.inArray(d, userHasDbs) === -1; });
+
+            var dbAccessAdvancedTemplate = $('#dbAccessAdvancedTemplate').html();
+
+            var perms;
+
+            if (userData.AccessToAllDatabases) {
+                perms = $.map(availableDbs, function(d) {
+                    return {
+                        name: d,
+                        isAdmin: false,
+                        isReadOnly: false
+                    };
+                });
+            } else {
+                perms = $.map(userData.Databases, function(p) {
+                    return {
+                        name: p.Name,
+                        isAdmin: p.IsAdmin,
+                        isReadOnly: p.IsReadOnly
+                    };
+                });
+            }
+
+            var dbAccessAdvancedModel = {
+                perms: perms,
+                hasAddButton: userAvailableDbs.length > 0
+            };
+
+            var dbAddPermTemplate = $('#dbAddPermTemplate').html();
+            var dbAccessAdvancedDialogContents = Mustache.render(
+                dbAccessAdvancedTemplate,
+                dbAccessAdvancedModel,
+                { addButton: dbAddPermTemplate });
+
+            $('#dbAccessAdvanced').empty().append(dbAccessAdvancedDialogContents);
+
+            dialog.find('input[type=checkbox]').button();
+
+            dialog.find('#addPermissionButton').button({
+                icons: { primary: 'ui-icon-circle-plus' }
+            });
+
+            dialog.find('.removePermissionButton')
+                .button({
+                    icons: { primary: 'ui-icon-circle-minus' },
+                    text: false
+                }).on('click', function(e) {
+                    var perm = $(e.target).closest('.perm');
+                    var db = perm.data('db');
+                    
+                    if (userData.AccessToAllDatabases) {
+                        userData.AccessToAllDatabases = false;
+                        userData.Databases = $.map(availableDbs, function(d) {
+                            return {
+                                Name: d,
+                                IsAdmin: false,
+                                IsReadOnly: false
+                            };
+                        });
+                    }
+                    
+                    userData.Databases = $.grep(userData.Databases, function(p) { return p.Name != db; });
+
+                    perm.fadeOut('fast', function() { populateDbAccessDialogForUser(); });
+                });
+        };
+
+        populateDbAccessDialogForUser();
+        
+        var radios = dialog.find('#dbAccessTypes input[name=AccessType]');
+        radios.removeAttr('checked');
+        var checkedRadioValue = userData.AccessToAllDatabases ? 'All' : 'Advanced';
+        radios.filter('[value=' + checkedRadioValue + ']').attr('checked', true);
+        setActiveDbAccessType();
+    };
+
+    var initializeDbOptions = function() {
+        $.get("@Url.Action("GetDatabases", "Databases")", function(dbs) {
+            availableDbs = dbs;
+        });
+    };
+
     $(document).ready(function () {
+        initializeDbOptions();
+
         $('#newButton').button({ icons: { primary: 'ui-icon-plus'} });
         
         $('.button.delete')
@@ -212,6 +415,51 @@
             });
 
         $('#newButton').on('click', function () { $('#newDialog').dialog('open'); });
+
+        $('#dbAccessDialog')
+            .bindEnter()
+            .dialog({
+                autoOpen: false,
+                modal: true,
+                title: "Manage database access",
+                width: 500,
+                buttons: {
+                    "Save": function () {
+                        var formId = $('#dbAccessDialog input[name=AccessType]:checked').val() == 'All'
+                            ? 'dbPermsAllForm'
+                            : 'dbPermsAdvancedForm';
+                        
+                        var form = $('#' + formId);
+                        form.submit();
+                        
+                        $(this).dialog('close');
+                    },
+                    "Cancel": function () {
+                        $(this).dialog('close');
+                    }
+                }
+            });
+
+        $('#dbAccessDialog form')
+            .ajaxForm({
+                clearForm: true,
+                success: function(responseText, statusText, xhr, form) {
+                    var user = form.find('input[name=name]').val();
+                    raven.ui.displayMessage($.format('Database access saved for user {0}', user));
+                }
+            });
+
+        $('.dbAccess')
+            .attr('title', 'Click to manage')
+            .on('click', function() {
+                var user = $(this).parents('li.user').data('user');
+                populateDbAccessDialogForUserName(user);
+                $('#dbAccessDialog')
+                    .dialog('open')
+                    .find('input[name=name]').val(user);
+            });
+
+        $('#dbAccessDialog input[name=AccessType]').on('change', function() { setActiveDbAccessType(); });
 
         $('.admin')
             .attr('title', 'Click to toggle')

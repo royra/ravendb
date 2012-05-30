@@ -11,19 +11,34 @@ namespace Raven.WebConsole.Controllers
     public class UsersController : ContentController
     {
         private readonly IDocumentSession session;
+        private readonly IDocumentStore store;
 
-        public UsersController(IDocumentSession session)
+        public UsersController(IDocumentSession session, IDocumentStore store)
         {
             this.session = session;
+            this.store = store;
+        }
+
+        protected AuthenticationUser GetUser(string name, bool throwIfNotExists = true)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("user should not be empty");
+
+            var user = RavenSession.Query<AuthenticationUser>().SingleOrDefault(u => u.Name == name || u.Id == name);
+
+            if (throwIfNotExists && user == null)
+                throw new Exception(string.Format("No such user '{0}'", name));
+
+            return user;
         }
 
         public override ActionResult Index()
         {
             var users = session.Query<AuthenticationUser>().OrderBy(u => u.Name).ToList();
 
-            return View(new UsersViewModel()
+            return View(new UsersViewModel
                             {
-                                Users = users.Select(u => new UsersViewModel.User(u.Name, u.Admin, u.AllowedDatabases))
+                                Users = users.Select(u => new UsersViewModel.User(u)),
                             });
         }
 
@@ -110,19 +125,6 @@ namespace Raven.WebConsole.Controllers
             return new EmptyResult();
         }
 
-        private AuthenticationUser GetUser(string name, bool throwIfNotExists = true)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("user should not be empty");
-
-            var user = RavenSession.Query<AuthenticationUser>().SingleOrDefault(u => u.Name == name || u.Id == name);
-
-            if (throwIfNotExists && user == null)
-                throw new Exception(string.Format("No such user '{0}'", name));
-
-            return user;
-        }
-
         [HttpPost]
         public ActionResult SetAdmin(string name, bool isAdmin)
         {
@@ -130,6 +132,27 @@ namespace Raven.WebConsole.Controllers
 
             user.Admin = isAdmin;
 
+            return new EmptyResult();
+        }
+
+        [HttpPost]
+        public ActionResult SetDatabasePermissions([Bind(Prefix = "name")]string userName, DatabaseAccessViewModel[] perms)
+        {
+            if (userName == null) throw new ArgumentNullException("userName");
+            if (perms == null) throw new ArgumentNullException("perms");
+
+            var user = GetUser(userName);
+            perms.SetInAuthenticationUser(user);
+
+            return new EmptyResult();
+        }
+
+        [HttpPost]
+        public ActionResult SetDatabasePermissionsToAll([Bind(Prefix = "name")]string userName)
+        {
+            var user = GetUser(userName);
+            user.Databases = new UserDatabaseAccess[0];
+            user.AllowedDatabases = new[] { "*" };
             return new EmptyResult();
         }
     }

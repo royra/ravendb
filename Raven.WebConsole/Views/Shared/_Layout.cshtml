@@ -11,10 +11,8 @@
     <script src="@Url.Content("~/Scripts/jquery.validate.js")" type="text/javascript"></script>
     <script src="@Url.Content("~/Scripts/jquery-ui-1.8.19.js")" type="text/javascript"></script>
     <script src="@Url.Content("~/Scripts/jquery.form.3.09.js")" type="text/javascript"></script>
-    <script src="@Url.Content("~/Scripts/jquery.cookie.1fa4a1807.js")" type="text/javascript"></script>
+    @*<script src="@Url.Content("~/Scripts/jquery.cookie.1fa4a1807.js")" type="text/javascript"></script>*@
     <script src="@Url.Content("~/Scripts/humane.js")" type="text/javascript"></script>
-
-    @RenderSection("head", false)
 
     <script type="text/javascript">
     $.extend($.validator.messages, {
@@ -36,6 +34,8 @@
     };
 
     </script>
+
+    @RenderSection("head", false)
 </head>
 
 <body>

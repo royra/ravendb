@@ -5,6 +5,7 @@ using System.Net;
 using System.Web.Mvc;
 using Newtonsoft.Json;
 using Raven.Abstractions.Data;
+using Raven.Bundles.Authentication;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
@@ -17,6 +18,7 @@ namespace Raven.WebConsole.Controllers
     {
         private readonly IDocumentStore store;
         private readonly IWebClient webClient;
+        private int MAX_DATABASES = 1000;
 
         public DatabasesController(IDocumentStore store, IWebClient webClient)
         {
@@ -28,7 +30,7 @@ namespace Raven.WebConsole.Controllers
         {
             var baseUrl = store.Url;
 
-            var databases = DatabaseCommands.GetDatabaseNames(1000)
+            var databases = DatabaseCommands.GetDatabaseNames(MAX_DATABASES)
                 .OrderBy(n => n)
                 .Select(delegate(string dbName)
                             {
@@ -98,7 +100,7 @@ namespace Raven.WebConsole.Controllers
             if (string.IsNullOrWhiteSpace(name))
                 return "*";
 
-            var existingNames = DatabaseCommands.GetDatabaseNames(1000);
+            var existingNames = DatabaseCommands.GetDatabaseNames(MAX_DATABASES);
 
             if (existingNames.Any(n => name.Equals(n, StringComparison.InvariantCultureIgnoreCase)))
                 return "Already exists";
@@ -116,7 +118,7 @@ namespace Raven.WebConsole.Controllers
             if (!validation.IsValid)
                 throw new ClientVisibleException {ClientVisibleMessage = validation.ErrorMessage};
             
-            var url = string.Format("{0}/databases/admin/backup", store.Url);
+            var url = string.Format("{0}/databases/{1}/admin/backup", store.Url, name);
             var json = new {BackupLocation = path};
             webClient.PostJson(url, json);
 
@@ -136,6 +138,15 @@ namespace Raven.WebConsole.Controllers
                 return new JQueryValidateRemoteResult("No such directory");
 
             return new JQueryValidateRemoteResult();
+        }
+
+        public JsonResult GetDatabases()
+        {
+            return new JsonResult
+                       {
+                           JsonRequestBehavior = JsonRequestBehavior.AllowGet,
+                           Data = DatabaseCommands.GetDatabaseNames(MAX_DATABASES)
+                       };
         }
     }
 }

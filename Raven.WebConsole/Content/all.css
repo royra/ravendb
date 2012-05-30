@@ -1687,3 +1687,14 @@ label.error {
     margin-left: 10px;
 }
 
+#dbPerms .perm .name {
+    width: 100px;
+    background-image: url(/images/db-16px.png);
+    background-position: left;
+    background-repeat: no-repeat;
+    padding-left: 20px;
+}
+
+#dbAccessAdvanced {
+    margin-left: 20px;
+}
