@@ -112,7 +112,6 @@ namespace Raven.Database
 			AppDomain.CurrentDomain.DomainUnload += DomainUnloadOrProcessExit;
 			AppDomain.CurrentDomain.ProcessExit += DomainUnloadOrProcessExit;
 
-			ExternalState = new ConcurrentDictionary<string, object>();
 			Name = configuration.DatabaseName;
 			if(configuration.CustomTaskScheduler != null)
 			{
@@ -274,6 +273,9 @@ namespace Raven.Database
 
 				TransactionalStorage.Batch(actions =>
 				{
+					result.LastDocEtag = actions.Staleness.GetMostRecentDocumentEtag();
+					result.LastAttachmentEtag = actions.Staleness.GetMostRecentAttachmentEtag();
+
 					result.ApproximateTaskCount = actions.Tasks.ApproximateTaskCount;
 					result.CountOfDocuments = actions.Documents.GetDocumentsCount();
 					result.StaleIndexes = IndexStorage.Indexes
@@ -284,8 +286,6 @@ namespace Raven.Database
 			}
 		}
 		
-		public ConcurrentDictionary<string, object> ExternalState { get; set; }
-
 		public InMemoryRavenConfiguration Configuration
 		{
 			get;

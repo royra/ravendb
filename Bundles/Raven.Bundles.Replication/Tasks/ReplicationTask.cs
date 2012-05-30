@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -368,10 +369,18 @@ namespace Raven.Bundles.Replication.Tasks
 				var response = e.Response as HttpWebResponse;
 				if (response != null)
 				{
-					using (var streamReader = new StreamReader(response.GetResponseStream()))
+					Stream responseStream = response.GetResponseStream();
+					if (responseStream != null)
 					{
-						var error = streamReader.ReadToEnd();
-						log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
+						using (var streamReader = new StreamReader(responseStream))
+						{
+							var error = streamReader.ReadToEnd();
+							log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
+						}
+					}
+					else
+					{
+						log.WarnException("Replication to " + destination + " had failed", e);
 					}
 				}
 				else
@@ -396,19 +405,49 @@ namespace Raven.Bundles.Replication.Tasks
 
 				docDb.TransactionalStorage.Batch(actions =>
 				{
-					var docsToReplicate =
-						actions.Documents.GetDocumentsAfter(destinationsReplicationInformationForSource.LastDocumentEtag, 100).ToList();
-					var filteredDocsToReplicate =
-						docsToReplicate.Where(document => destination.FilterDocuments(document, destinationId)).ToList();
-					
+					int docsSinceLastReplEtag = 0;
+					List<JsonDocument> docsToReplicate;
+					List<JsonDocument> filteredDocsToReplicate;
+					Guid lastDocumentEtag = destinationsReplicationInformationForSource.LastDocumentEtag;
+					while (true)
+					{
+						docsToReplicate = actions.Documents.GetDocumentsAfter(lastDocumentEtag, 100).ToList();
+						filteredDocsToReplicate = docsToReplicate.Where(document => destination.FilterDocuments(document, destinationId)).ToList();
+
+						docsSinceLastReplEtag += docsToReplicate.Count;
+
+						if (docsToReplicate.Count == 0 || 
+							filteredDocsToReplicate.Count != 0)
+						{
+							break;
+						}
+
+						JsonDocument jsonDocument = docsToReplicate.Last();
+						Debug.Assert(jsonDocument.Etag != null);
+						Guid documentEtag = jsonDocument.Etag.Value;
+						log.Debug("All the docs were filtered, trying another batch from etag [>{0}]", docsToReplicate);
+						lastDocumentEtag = documentEtag;
+					}
+
 					log.Debug(() =>
 					{
+						if (docsSinceLastReplEtag == 0)
+							return string.Format("Nothing to replicate to {0} - last replicated etag: {1}", destination,
+							                     destinationsReplicationInformationForSource.LastDocumentEtag);
+											 
+						if(docsSinceLastReplEtag == filteredDocsToReplicate.Count)
+							return string.Format("Replicating {0} docs [>{1}] to {2}.",
+											 docsSinceLastReplEtag,
+											 destinationsReplicationInformationForSource.LastDocumentEtag,
+											 destination);
+
 						var diff = docsToReplicate.Except(filteredDocsToReplicate).Select(x => x.Key);
-						return string.Format("Will replicate {1} (out of {0}) {1} to replicate to {2}. [Not replicated: {3}]",
-						                     docsToReplicate.Count,
+						return string.Format("Replicating {1} docs (out of {0}) [>{4}] to {2}. [Not replicated: {3}]",
+						                     docsSinceLastReplEtag,
 											 filteredDocsToReplicate.Count, 
 											 destination,
-						                     string.Join(", ", diff));
+						                     string.Join(", ", diff),
+											 destinationsReplicationInformationForSource.LastDocumentEtag);
 					});
 
 					jsonDocuments = new RavenJArray(filteredDocsToReplicate
