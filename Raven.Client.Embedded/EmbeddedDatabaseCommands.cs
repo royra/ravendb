@@ -685,6 +685,14 @@ namespace Raven.Client.Embedded
 			throw new NotSupportedException("Multi GET is only support for Server/Client, not embedded");
 		}
 
+        /// <summary>
+        /// Returns the database size in bytes
+        /// </summary>
+        public long GetSize()
+        {
+            return database.GetTotalSizeOnDisk();
+        }
+
 		#endregion
 
 		/// <summary>

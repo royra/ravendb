@@ -39,9 +39,7 @@ namespace Raven.WebConsole.Controllers
                 .OrderBy(n => n)
                 .Select(delegate(string dbName)
                             {
-                                var dbUrl = string.Format("{0}/databases/{1}", baseUrl, dbName);
-                                var dbSizeBytes = (long)
-                                    webClient.GetDynamicJson(string.Format("{0}/database/size", dbUrl)).DatabaseSize;
+                                var dbSizeBytes = DatabaseCommands.ForDatabase(dbName).GetSize();
 
                                 BackupStatus backupStatus;
                                 using (var ses = store.OpenSession(dbName))

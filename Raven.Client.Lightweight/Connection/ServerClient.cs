@@ -16,6 +16,7 @@ using System.Text;
 using System.Threading;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
+using Newtonsoft.Json.Linq;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
 using Raven.Abstractions.Connection;
@@ -1395,7 +1396,32 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
 			return jsonRequestFactory.DisableAllCaching();
 		}
 
+        /// <summary>
+        /// Returns the database size in bytes
+        /// </summary>
+        public long GetSize()
+        {
+            var metadata = new RavenJObject();
+            var actualUrl = string.Format("{0}/database/size", url);
+            var request = jsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
+                    .AddOperationHeaders(OperationsHeaders));
 
+            RavenJToken responseJson;
+            try
+            {
+                responseJson = request.ReadResponseJson();
+            }
+            catch (WebException e)
+            {
+                var httpWebResponse = e.Response as HttpWebResponse;
+                if (httpWebResponse == null ||
+                    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
+                    throw;
+                throw ThrowConcurrencyException(e);
+            }
+            return responseJson.Value<long>("DatabaseSize");
+        }
 
 		#endregion
 
