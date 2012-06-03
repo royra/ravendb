@@ -82,7 +82,7 @@
     <Compile Include="HtmlHelperExtensions.cs" />
     <Compile Include="JQueryValidateRemoteResult.cs" />
     <Compile Include="Keys.cs" />
-    <Compile Include="ViewModels\DatabaseAccessViewModel.cs" />
+    <Compile Include="ViewModels\DatabasePermissionsViewModel.cs" />
     <Compile Include="ViewModels\UsersViewModel.cs" />
     <Compile Include="Utils\DecimalExtensions.cs" />
     <Compile Include="Utils\MyWebClient.cs" />

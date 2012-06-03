@@ -14,7 +14,7 @@ namespace Raven.WebConsole.ViewModels
             public string Name;
             public bool IsAdmin;
             public bool AccessToAllDatabases;
-            public IEnumerable<DatabaseAccessViewModel> Databases;
+            public IEnumerable<DatabasePermissionsViewModel> Databases;
 
             public User()
             {

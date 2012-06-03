@@ -132,9 +132,9 @@
                             {{name}}
                         </td>
                         <td>
-                            <input type="hidden" name="perms.Name" value="{{name}}"/>
-                            <input type="checkbox" name="perms.IsAdmin" id="{{name}}_IsAdmin" {{#isAdmin}}checked="checked"{{/isAdmin}}/><label for="{{name}}_IsAdmin">Admin</label>
-                            <input type="checkbox" name="perms.IsReadOnly" id="{{name}}_IsReadOnly" {{#isReadOnly}}checked="checked"{{/isReadOnly}}/><label for="{{name}}_IsReadOnly">Read-only</label>
+                            <input type="hidden" name="perms[{{index}}].Name" value="{{name}}"/>
+                            <input type="checkbox" name="perms[{{index}}].IsAdmin" id="{{name}}_IsAdmin" {{#isAdmin}}checked="checked"{{/isAdmin}}/><label for="{{name}}_IsAdmin">Admin</label>
+                            <input type="checkbox" name="perms[{{index}}].IsReadOnly" id="{{name}}_IsReadOnly" {{#isReadOnly}}checked="checked"{{/isReadOnly}}/><label for="{{name}}_IsReadOnly">Read-only</label>
                             <a href="javascript:void(0);" class="removePermissionButton">Remove</a>
                         </td>
                     </tr>
@@ -209,16 +209,18 @@
             var perms;
 
             if (userData.AccessToAllDatabases) {
-                perms = $.map(availableDbs, function(d) {
+                perms = $.map(availableDbs, function(d, i) {
                     return {
+                        index: i,
                         name: d,
                         isAdmin: false,
                         isReadOnly: false
                     };
                 });
             } else {
-                perms = $.map(userData.Databases, function(p) {
+                perms = $.map(userData.Databases, function(p, i) {
                     return {
+                        index: i,
                         name: p.Name,
                         isAdmin: p.IsAdmin,
                         isReadOnly: p.IsReadOnly
@@ -268,6 +270,8 @@
 
                     perm.fadeOut('fast', function() { populateDbAccessDialogForUser(); });
                 });
+            
+            dialog.find('input[name=name]').val(userName);
         };
 
         populateDbAccessDialogForUser();
@@ -440,23 +444,12 @@
                 }
             });
 
-        $('#dbAccessDialog form')
-            .ajaxForm({
-                clearForm: true,
-                success: function(responseText, statusText, xhr, form) {
-                    var user = form.find('input[name=name]').val();
-                    raven.ui.displayMessage($.format('Database access saved for user {0}', user));
-                }
-            });
-
         $('.dbAccess')
             .attr('title', 'Click to manage')
             .on('click', function() {
                 var user = $(this).parents('li.user').data('user');
                 populateDbAccessDialogForUserName(user);
-                $('#dbAccessDialog')
-                    .dialog('open')
-                    .find('input[name=name]').val(user);
+                $('#dbAccessDialog').dialog('open');
             });
 
         $('#dbAccessDialog input[name=AccessType]').on('change', function() { setActiveDbAccessType(); });

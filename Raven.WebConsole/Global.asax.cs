@@ -10,6 +10,7 @@ using Raven.Client;
 using Raven.Client.Document;
 using Raven.Client.Indexes;
 using Raven.WebConsole.Utils;
+using Raven.WebConsole.ViewModels;
 
 namespace Raven.WebConsole
 {

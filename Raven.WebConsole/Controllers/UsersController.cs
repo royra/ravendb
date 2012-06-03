@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Web.Mvc;
 using Raven.Bundles.Authentication;
 using Raven.Client;
@@ -136,15 +138,46 @@ namespace Raven.WebConsole.Controllers
         }
 
         [HttpPost]
-        public ActionResult SetDatabasePermissions([Bind(Prefix = "name")]string userName, DatabaseAccessViewModel[] perms)
+        public ActionResult SetDatabasePermissions(FormCollection form)
         {
+            var userName = form["name"];
+            
             if (userName == null) throw new ArgumentNullException("userName");
-            if (perms == null) throw new ArgumentNullException("perms");
+
+            var perms = GetPermsFromForm(form);
+
+            if (perms == null || perms.Count == 0) throw new ArgumentNullException("perms");
 
             var user = GetUser(userName);
             perms.SetInAuthenticationUser(user);
 
-            return new EmptyResult();
+            SetMessage(string.Format("Database permissions saved for user {0}", userName));
+            return RedirectToAction("Index");
+        }
+
+        private static List<DatabasePermissionsViewModel> GetPermsFromForm(FormCollection form)
+        {
+            var perms = new List<DatabasePermissionsViewModel>();
+            var i = 0;
+            string dbName;
+            do
+            {
+                var basePrefix = string.Format("perms[{0}].", i);
+                dbName = form[basePrefix + "Name"];
+                if (dbName != null)
+                {
+                    perms.Add(new DatabasePermissionsViewModel
+                                  {
+                                      Name = dbName,
+                                      IsAdmin = form[basePrefix + "IsAdmin"] != null,
+                                      IsReadOnly = form[basePrefix + "IsReadonly"] != null,
+                                  });
+                }
+                
+                ++i;
+            } while (dbName != null);
+
+            return perms;
         }
 
         [HttpPost]
@@ -153,7 +186,9 @@ namespace Raven.WebConsole.Controllers
             var user = GetUser(userName);
             user.Databases = new UserDatabaseAccess[0];
             user.AllowedDatabases = new[] { "*" };
-            return new EmptyResult();
+
+            SetMessage(string.Format("Database permissions saved for user {0}", userName));
+            return RedirectToAction("Index");
         }
     }
 }
