@@ -82,6 +82,24 @@
     </form>
 </div>
 
+<div id="deleteConfirmationDialog" style="display: none">
+    <form action="@Url.Action("Delete")" method="post" style="margin-top: 20px; margin-bottom: 20px">
+        <strong>This is a destructive operation with no undo.</strong>
+        <br/>
+        <br/>
+        All data will be deleted from disk!
+        <br/>
+        <br/>
+        <fieldset>
+            <legend></legend>
+            <label for="deleteDatabaseConfirmationNameVerify">Please enter the database name below to confirm:</label>
+            <br/>
+            <input type="text" name="nameVerify" id="deleteDatabaseConfirmationNameVerify" />
+            <input type="hidden" name="name" id="deleteDatabaseConfirmationName"/>
+        </fieldset>
+    </form>
+</div>
+
 <script type="text/javascript">
     $(document).ready(function () {
 
@@ -91,12 +109,25 @@
                 var button = $(e.target);
 
                 var db = button.parents('li.db').data('db');
-                if (!confirm($.format("About to delete database {0}.\nAre you sure?", db))) {
-                    return false;
-                }
 
-                $(this).parent().find('form').submit();
-                return true;
+                $('#deleteConfirmationDialog').dialog({
+                    autoOpen: true,
+                    modal: true,
+                    title: 'About to delete database ' + db,
+                    width: 500,
+                    buttons: {
+                        'Delete': function () {
+                            $(this).parent().find('form').submit();
+                            return true;
+                        },
+                        'Cancel': function () {
+                            $('#deleteConfirmationDialog').dialog('destroy');
+                        }
+                    }
+                });
+                
+                $('#deleteDatabaseConfirmationName').val(db);
+                $('#deleteDatabaseConfirmationNameVerify').val('');
             })
             .button({ icons: { primary: 'ui-icon-trash'} });
         
@@ -180,5 +211,25 @@
 
         $('#newButton').on('click', function () { $('#newDialog').dialog('open'); });
         
+        $('#deleteConfirmationDialog form')
+            .validate({
+                rules: {
+                    nameVerify: {
+                        required: true,
+                        equalTo: '#deleteDatabaseConfirmationName'
+                    }
+                },
+                messages: {
+                    nameVerify: {
+                        equalTo: 'Enter the database name'
+                    }
+                },
+                submitHandler: function (form) {
+                    var db = $('#deleteDatabaseConfirmationName').val();
+                    if (confirm("Really delete database " + db + "?")) {
+                        form.submit();
+                    };
+                }
+            });
     });
 </script>
