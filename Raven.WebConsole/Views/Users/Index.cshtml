@@ -127,49 +127,35 @@
             <legend></legend>
             <table id="dbPerms">
                 {{#perms}}
-                    <tr class="perm" data-db="{{name}}" >
+                    <tr class="perm" data-index="{{index}}" >
                         <td class="name">
-                            {{name}}
+                            {{#name}}
+                                <input type="hidden" name="perms[{{index}}].Name" value="{{name}}"/>
+                                {{name}}
+                            {{/name}}
+                            {{#activeAddRow}}
+                                <select name="perms[{{index}}].Name">
+                                    {{#dbs}}
+                                        <option value="{{.}}">{{.}}</option>
+                                    {{/dbs}}
+                                </select>
+                            {{/activeAddRow}}
                         </td>
                         <td>
-                            <input type="hidden" name="perms[{{index}}].Name" value="{{name}}"/>
-                            <input type="checkbox" name="perms[{{index}}].IsAdmin" id="{{name}}_IsAdmin" {{#isAdmin}}checked="checked"{{/isAdmin}}/><label for="{{name}}_IsAdmin">Admin</label>
-                            <input type="checkbox" name="perms[{{index}}].IsReadOnly" id="{{name}}_IsReadOnly" {{#isReadOnly}}checked="checked"{{/isReadOnly}}/><label for="{{name}}_IsReadOnly">Read-only</label>
+                            <input type="checkbox" name="perms[{{index}}].IsAdmin" id="perm{{index}}_IsAdmin" {{#isAdmin}}checked="checked"{{/isAdmin}}/><label for="perm{{index}}_IsAdmin">Admin</label>
+                            <input type="checkbox" name="perms[{{index}}].IsReadOnly" id="perm{{index}}_IsReadOnly" {{#isReadOnly}}checked="checked"{{/isReadOnly}}/><label for="perm{{index}}_IsReadOnly">Read-only</label>
                             <a href="javascript:void(0);" class="removePermissionButton">Remove</a>
                         </td>
                     </tr>
                 {{/perms}}
                 {{#hasAddButton}}
-                    {{> addButton}}
+                    <tr class="perm">
+                        <td colspan="2"><a href="javascript:void(0);" id="addPermissionButton">Add</a></td>
+                    </tr>
                 {{/hasAddButton}}
             </table>
         </fieldset>
     </form>
-}
-
-@using (Html.BeginHtmlTemplate("dbAddPermTemplate")) {
-                    <tr class="addPerm">
-                        <td colspan="2"><a href="javascript:void(0);" id="addPermissionButton">Add</a></td>
-                    </tr>
-}
-
-
-@using (Html.BeginHtmlTemplate("dbAddPermDialogTemplate"))
-{
-    <tr class="addPerm">
-        <td>
-            <select name="name">
-                {{#dbs}}
-                    <option value="{{.}}">{{.}}</option>
-                {{/dbs}}
-            </select>
-        </td>
-        <td>
-            <input type="checkbox" name="IsAdmin" id="new__IsAdmin"/><label for="new__IsAdmin">Admin</label>
-            <input type="checkbox" name="IsReadOnly" id="new__IsReadOnly"/><label for="new__IsReadOnly">Read-only</label>
-            <a href="javascript:void(0);" id="addPermissionDoneButton"></a>
-        </td>
-    </tr>
 }
 
 <script type="text/javascript">
@@ -197,6 +183,8 @@
             throw new Error('Cannot find user ' + userName);
         }
 
+        var activeAddRow = false;
+        
         var populateDbAccessDialogForUser = function() {
             var userHasDbs = userData.AccessToAllDatabases
                 ? availableDbs
@@ -228,24 +216,45 @@
                 });
             }
 
-            var dbAccessAdvancedModel = {
-                perms: perms,
-                hasAddButton: userAvailableDbs.length > 0
-            };
+            if (activeAddRow) {
+                perms.push({
+                    index: perms.length,
+                    activeAddRow: {
+                        dbs: userAvailableDbs
+                    }
+                });
+            }
 
-            var dbAddPermTemplate = $('#dbAddPermTemplate').html();
+            var dbAccessAdvancedModel = {
+                perms: perms
+            };
+            
+            dbAccessAdvancedModel.hasAddButton = availableDbs.length - perms.length > 0;
+
             var dbAccessAdvancedDialogContents = Mustache.render(
                 dbAccessAdvancedTemplate,
-                dbAccessAdvancedModel,
-                { addButton: dbAddPermTemplate });
+                dbAccessAdvancedModel);
 
             $('#dbAccessAdvanced').empty().append(dbAccessAdvancedDialogContents);
 
             dialog.find('input[type=checkbox]').button();
 
-            dialog.find('#addPermissionButton').button({
-                icons: { primary: 'ui-icon-circle-plus' }
-            });
+            dialog.find('#addPermissionButton')
+                .button({
+                    icons: { primary: 'ui-icon-circle-plus' }
+                }).on('click', function () {
+                    if (activeAddRow) {
+                        var namePrefix = "perms[" + (perms.length - 1) + "].";
+                        userData.Databases.push({
+                            Name: dialog.find("select[name='" + namePrefix + "Name']").val(),
+                            IsAdmin: dialog.find("input[name='" + namePrefix + "IsAdmin']").is(':checked'),
+                            IsReadOnly: dialog.find("input[name='" + namePrefix + "IsReadOnly']").is(':checked')
+                        });
+                    }
+                    
+                    activeAddRow = true;
+                    populateDbAccessDialogForUser();
+                });
 
             dialog.find('.removePermissionButton')
                 .button({
@@ -253,7 +262,13 @@
                     text: false
                 }).on('click', function(e) {
                     var perm = $(e.target).closest('.perm');
-                    var db = perm.data('db');
+                    var index = perm.data('index');
+                    var namePrefix = 'perms[' + index + '].';
+                    var db = dialog.find("[name='" + namePrefix + "Name']").val();
+                    
+                    if (activeAddRow && index == perms.length - 1) {
+                        activeAddRow = false;
+                    }
                     
                     if (userData.AccessToAllDatabases) {
                         userData.AccessToAllDatabases = false;
