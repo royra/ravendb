@@ -11,5 +11,10 @@ namespace Raven.WebConsole
         {
             public const string UI_MESSAGE = "msg";
         }
+
+        public static class Database
+        {
+            public const string AUTH_USERS_PREFIX = "Raven/Users/";
+        }
     }
 }

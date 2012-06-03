@@ -76,11 +76,11 @@ namespace Raven.WebConsole
         {
             using (var session = store.OpenSession())
             {
-                if (session.Query<AuthenticationUser>().FirstOrDefault() == null)
+                if (!session.Advanced.LoadStartingWith<AuthenticationUser>(Keys.Database.AUTH_USERS_PREFIX).Any())
                 {
                     session.Store(new AuthenticationUser
                                       {
-                                          Id = "Users/admin",
+                                          Id = Keys.Database.AUTH_USERS_PREFIX + "admin",
                                           Admin = true,
                                           AllowedDatabases = new []{"*"},
                                           Name = "Admin"

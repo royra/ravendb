@@ -13,30 +13,16 @@ namespace Raven.WebConsole.Controllers
     public class UsersController : ContentController
     {
         private readonly IDocumentSession session;
-        private readonly IDocumentStore store;
 
-        public UsersController(IDocumentSession session, IDocumentStore store)
+        public UsersController(IDocumentSession session)
+            :base(session)
         {
             this.session = session;
-            this.store = store;
-        }
-
-        protected AuthenticationUser GetUser(string name, bool throwIfNotExists = true)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("user should not be empty");
-
-            var user = RavenSession.Query<AuthenticationUser>().SingleOrDefault(u => u.Name == name || u.Id == name);
-
-            if (throwIfNotExists && user == null)
-                throw new Exception(string.Format("No such user '{0}'", name));
-
-            return user;
         }
 
         public override ActionResult Index()
         {
-            var users = session.Query<AuthenticationUser>().OrderBy(u => u.Name).ToList();
+            var users = session.Advanced.LoadStartingWith<AuthenticationUser>(Keys.Database.AUTH_USERS_PREFIX).ToList();
 
             return View(new UsersViewModel
                             {
@@ -47,12 +33,12 @@ namespace Raven.WebConsole.Controllers
         [HttpPost]
         public ActionResult Delete(string name)
         {
-            var ravenUser = RavenSession.Query<AuthenticationUser>()
-                .FirstOrDefault(u => u.Name == name);
+            var ravenUser = GetUser(name, false);
 
             if (ravenUser != null)
             {
-                var ravenUserCount = RavenSession.Query<AuthenticationUser>().Count();
+                var ravenUserCount = session.Advanced.LoadStartingWith<AuthenticationUser>(Keys.Database.AUTH_USERS_PREFIX, pageSize: 2).Count();
+                
                 if (ravenUserCount == 1)
                     SetMessage("Cannot delete the only user", MessageLevel.Note);
                 else
@@ -72,7 +58,7 @@ namespace Raven.WebConsole.Controllers
             if (string.IsNullOrWhiteSpace(name))
                 return new JQueryValidateRemoteResult("*");
 
-            var existingUser = RavenSession.Query<AuthenticationUser>().FirstOrDefault(u => u.Name == name);
+            var existingUser = GetUser(name, false);
 
             if (existingUser != null)
                 return new JQueryValidateRemoteResult("Already exists");
@@ -99,9 +85,11 @@ namespace Raven.WebConsole.Controllers
                 return RedirectToAction("Index");
             }
 
+            model.IsAdmin = Request.Form["isAdmin"] != null;
+
             session.Store(new AuthenticationUser
             {
-                Id = string.Format("Users/{0}", model.Name),
+                Id = Keys.Database.AUTH_USERS_PREFIX + model.Name,
                 Admin = model.IsAdmin,
                 AllowedDatabases = new[] { "*" },
                 Name = model.Name,

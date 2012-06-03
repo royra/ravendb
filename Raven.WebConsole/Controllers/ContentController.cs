@@ -3,6 +3,7 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using Raven.Bundles.Authentication;
+using Raven.Client;
 
 namespace Raven.WebConsole.Controllers
 {
@@ -10,6 +11,10 @@ namespace Raven.WebConsole.Controllers
     [HandleClientVisibleException]
     public abstract class ContentController : BaseController
     {
+        protected ContentController(IDocumentSession session) : base(session)
+        {
+        }
+
         protected override void OnActionExecuting(ActionExecutingContext filterContext)
         {
             ViewBag.User = User.Identity.Name;

@@ -20,7 +20,8 @@ namespace Raven.WebConsole.Controllers
         private readonly IWebClient webClient;
         private int MAX_DATABASES = 1000;
 
-        public DatabasesController(IDocumentStore store, IWebClient webClient)
+        public DatabasesController(IDocumentStore store, IWebClient webClient, IDocumentSession session)
+            : base(session)
         {
             this.store = store;
             this.webClient = webClient;

@@ -3,12 +3,17 @@ using System.Linq;
 using System.Web.Mvc;
 using System.Web.Security;
 using Raven.Bundles.Authentication;
+using Raven.Client;
 using Raven.Client.Linq;
 
 namespace Raven.WebConsole.Controllers
 {
     public class HomeController : BaseController
     {
+        public HomeController(IDocumentSession session) : base(session)
+        {
+        }
+
         public RedirectToRouteResult DefaultPage
         {
             get
@@ -34,8 +39,7 @@ namespace Raven.WebConsole.Controllers
             user = user ?? "";
             user = user.Trim();
 
-            var ravenUser = RavenSession.Query<AuthenticationUser>()
-                .FirstOrDefault(u => u.Name == user);
+            var ravenUser = GetUser(user, false);
 
             var success = ravenUser != null && ravenUser.ValidatePassword(password);
 

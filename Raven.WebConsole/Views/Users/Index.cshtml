@@ -66,16 +66,18 @@
                     <td><input type="text" name="name" /></td>
                 </tr>
                 <tr>
-                    <td><label for="name">Password: </label></td>
+                    <td><label for="newUserPassword">Password: </label></td>
                     <td><input type="password" id="newUserPassword" name="password" /></td>
                 </tr>
                 <tr>
-                    <td><label for="name">Repeat password: </label></td>
+                    <td><label for="repeatPassword">Repeat password: </label></td>
                     <td><input type="password" name="repeatPassword" /></td>
                 </tr>
                 <tr>
                     <td></td>
-                    <td><input type="checkbox" name="isAdmin" /><label for="name">Create as admin</label></td>
+                    <td>
+                        <input type="checkbox" name="isAdmin" id="newUserIsAdmin"/><label for="newUserIsAdmin">Create as admin</label>
+                    </td>
                 </tr>
             </table>
         </fieldset>
@@ -142,8 +144,8 @@
                             {{/activeAddRow}}
                         </td>
                         <td>
-                            <input type="checkbox" name="perms[{{index}}].IsAdmin" id="perm{{index}}_IsAdmin" {{#isAdmin}}checked="checked"{{/isAdmin}}/><label for="perm{{index}}_IsAdmin">Admin</label>
-                            <input type="checkbox" name="perms[{{index}}].IsReadOnly" id="perm{{index}}_IsReadOnly" {{#isReadOnly}}checked="checked"{{/isReadOnly}}/><label for="perm{{index}}_IsReadOnly">Read-only</label>
+                            <input type="checkbox" class="isAdmin" name="perms[{{index}}].IsAdmin" id="perm{{index}}_IsAdmin" {{#isAdmin}}checked="checked"{{/isAdmin}}/><label for="perm{{index}}_IsAdmin">Admin</label>
+                            <input type="checkbox" class="isReadOnly" name="perms[{{index}}].IsReadOnly" id="perm{{index}}_IsReadOnly" {{#isReadOnly}}checked="checked"{{/isReadOnly}}/><label for="perm{{index}}_IsReadOnly">Read-only</label>
                             <a href="javascript:void(0);" class="removePermissionButton">Remove</a>
                         </td>
                     </tr>
@@ -237,7 +239,15 @@
 
             $('#dbAccessAdvanced').empty().append(dbAccessAdvancedDialogContents);
 
-            dialog.find('input[type=checkbox]').button();
+            var setBoolOnChange = function(e, property) {
+                var button = $(e.target);
+                var index = button.closest('.perm').data('index');
+                var d = userData.Databases[index];
+                d[property] = button.is(':checked');
+            };
+            
+            dialog.find('input.isAdmin').button().on('change', function (e) { setBoolOnChange(e, 'IsAdmin'); });
+            dialog.find('input.isReadOnly').button().on('change', function (e) { setBoolOnChange(e, 'IsReadOnly'); });
 
             dialog.find('#addPermissionButton')
                 .button({
@@ -311,7 +321,7 @@
         
         $('.button.delete')
             .on('click', function(e) {
-                var button = $(e.target);
+                var button = $(e.target).closest('.button.delete');
                 if (button.button('option', 'disabled')) {
                     return false;
                 }
