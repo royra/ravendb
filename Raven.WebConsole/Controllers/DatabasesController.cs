@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Web.Mvc;
 using Newtonsoft.Json;
 using Raven.Abstractions.Data;
@@ -9,6 +10,7 @@ using Raven.Bundles.Authentication;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
+using Raven.Database.Exceptions;
 using Raven.WebConsole.Utils;
 using Raven.WebConsole.ViewModels;
 
@@ -59,20 +61,47 @@ namespace Raven.WebConsole.Controllers
                             });
         }
 
+        private static readonly Regex filterStackTrace = new Regex(@"\n\s+at .*", RegexOptions.Multiline);
+
         public ActionResult New(string name)
         {
-            if (!ValidateNameJson(name).Equals(true))
+            if (!ValidateName(name).IsValid)
                 return RedirectToAction("Index");
 
-            DatabaseCommands.EnsureDatabaseExists(name);
+            string errorMessage = null;
+            try
+            {
+                DatabaseCommands.EnsureDatabaseExists(name);
+            }
+            catch(Exception e)
+            {
+                errorMessage = filterStackTrace.Replace(e.Message, "");
+            }
 
-            SetMessage(string.Format("Created database '{0}'", name));
+            if (errorMessage != null)
+                SetMessage(string.Format("There was an error while creating the database '{0}': {1}", name, errorMessage), MessageLevel.Warning);
+            else
+                SetMessage(string.Format("Created database '{0}'", name));
+
             return RedirectToAction("Index");
         }
 
-        public ActionResult ValidateName(string name)
+        public JQueryValidateRemoteResult ValidateName(string name)
         {
-            return new JsonResult {Data = ValidateNameJson(name), JsonRequestBehavior = JsonRequestBehavior.AllowGet};
+            if (string.IsNullOrWhiteSpace(name))
+                return new JQueryValidateRemoteResult("*");
+
+            name = name.Trim();
+
+            if ("default".Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                return new JQueryValidateRemoteResult("The name 'default' is reserved for the system default database");
+
+            var existingNames = DatabaseCommands.GetDatabaseNames(MAX_DATABASES);
+
+            if (existingNames.Any(n => name.Equals(n, StringComparison.InvariantCultureIgnoreCase)))
+                return new JQueryValidateRemoteResult("Already exists");
+
+            return new JQueryValidateRemoteResult();
         }
 
         [HttpPost]
@@ -86,19 +115,6 @@ namespace Raven.WebConsole.Controllers
         private IDatabaseCommands DatabaseCommands
         {
             get { return store.DatabaseCommands; }
-        }
-
-        private object ValidateNameJson(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name))
-                return "*";
-
-            var existingNames = DatabaseCommands.GetDatabaseNames(MAX_DATABASES);
-
-            if (existingNames.Any(n => name.Equals(n, StringComparison.InvariantCultureIgnoreCase)))
-                return "Already exists";
-
-            return true;
         }
 
         [HttpPost]

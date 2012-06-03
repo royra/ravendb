@@ -1,5 +1,7 @@
 using System;
 using System.Linq;
+using System.Net.Mime;
+using System.Text;
 using System.Web;
 using System.Web.Mvc;
 using Raven.Bundles.Authentication;
@@ -30,7 +32,7 @@ namespace Raven.WebConsole.Controllers
                     var parts = messageCookie.Value.Split(new[] {'/'}, 2);
                     if (parts.Length == 2 && !string.IsNullOrWhiteSpace(parts[1]))
                     {
-                        ViewBag.Message = parts[1];
+                        ViewBag.Message = Encoding.UTF8.GetString(Convert.FromBase64String(parts[1]));
                         MessageLevel level;
                         if (!Enum.TryParse(parts[0], true, out level))
                             level = MessageLevel.Info;
@@ -47,6 +49,7 @@ namespace Raven.WebConsole.Controllers
 
         protected void SetMessage(string message, MessageLevel level = MessageLevel.Info)
         {
+            message = Convert.ToBase64String(Encoding.UTF8.GetBytes(message));
             HttpContext.Items[Keys.HttpContextItems.HAS_UI_MESSAGE] = true;
             Response.Cookies.Set(new HttpCookie(Keys.Cookies.UI_MESSAGE, string.Format("{0}/{1}", level.ToString().ToLowerInvariant(), message)));
         }

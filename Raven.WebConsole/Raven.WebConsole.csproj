@@ -259,6 +259,10 @@
       <Project>{AA580048-17C7-4B1E-AA3A-321157CF3511}</Project>
       <Name>Raven.Client.MvcIntegration</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Raven.Database\Raven.Database.csproj">
+      <Project>{212823CD-25E1-41AC-92D1-D6DF4D53FC85}</Project>
+      <Name>Raven.Database</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Views\Shared\ContentPage.cshtml" />
