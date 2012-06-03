@@ -114,7 +114,7 @@ namespace Raven.WebConsole.Controllers
             if (name == null) throw new ArgumentNullException("name");
             if (path == null) throw new ArgumentNullException("path");
 
-            var validation = PathExists(path);
+            var validation = BackupPathOk(path);
             if (!validation.IsValid)
                 throw new ClientVisibleException {ClientVisibleMessage = validation.ErrorMessage};
             
@@ -125,17 +125,12 @@ namespace Raven.WebConsole.Controllers
             return new EmptyResult();
         }
 
-        public JQueryValidateRemoteResult PathExists(string path)
+        public JQueryValidateRemoteResult BackupPathOk(string path)
         {
             if (path == null) throw new ArgumentNullException("path");
 
             if (!Path.IsPathRooted(path))
                 return new JQueryValidateRemoteResult("Enter an absolute path");
-
-            var directoryName = Path.GetDirectoryName(path.TrimEnd('\\'));
-
-            if (!Directory.Exists(path) && (directoryName == null || !Directory.Exists(directoryName)))
-                return new JQueryValidateRemoteResult("No such directory");
 
             return new JQueryValidateRemoteResult();
         }
