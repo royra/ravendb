@@ -18,6 +18,7 @@ namespace Raven.WebConsole.Controllers
     {
         private readonly IDocumentStore store;
         private readonly IWebClient webClient;
+        private readonly IDocumentSession session;
         private int MAX_DATABASES = 1000;
 
         public DatabasesController(IDocumentStore store, IWebClient webClient, IDocumentSession session)
@@ -25,6 +26,7 @@ namespace Raven.WebConsole.Controllers
         {
             this.store = store;
             this.webClient = webClient;
+            this.session = session;
         }
 
         public override ActionResult Index()
@@ -40,18 +42,8 @@ namespace Raven.WebConsole.Controllers
                                     webClient.GetDynamicJson(string.Format("{0}/database/size", dbUrl)).DatabaseSize;
 
                                 BackupStatus backupStatus;
-                                try
-                                {
-                                    backupStatus = webClient.GetJson<BackupStatus>(string.Format("{0}/docs/Raven/Backup/Status", dbUrl));    
-                                }
-                                catch(WebException we)
-                                {
-                                    var r = we.Response as HttpWebResponse;
-                                    if (r != null && r.StatusCode == HttpStatusCode.NotFound)
-                                        backupStatus = null;
-                                    else
-                                        throw;
-                                }
+                                using (var ses = store.OpenSession(dbName))
+                                    backupStatus = ses.Load<BackupStatus>("Raven/Backup/Status");
                                 
                                 return new DatabasesViewModel.Database(
                                     dbName,
