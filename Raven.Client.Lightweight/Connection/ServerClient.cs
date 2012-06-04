@@ -1407,19 +1407,7 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
                 new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
                     .AddOperationHeaders(OperationsHeaders));
 
-            RavenJToken responseJson;
-            try
-            {
-                responseJson = request.ReadResponseJson();
-            }
-            catch (WebException e)
-            {
-                var httpWebResponse = e.Response as HttpWebResponse;
-                if (httpWebResponse == null ||
-                    httpWebResponse.StatusCode != HttpStatusCode.Conflict)
-                    throw;
-                throw ThrowConcurrencyException(e);
-            }
+            var responseJson = request.ReadResponseJson();
             return responseJson.Value<long>("DatabaseSize");
         }
 
