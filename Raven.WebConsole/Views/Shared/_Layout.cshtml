@@ -17,7 +17,8 @@
     <script type="text/javascript">
     $.extend($.validator.messages, {
         required: "*",
-        minlength: 'At least {0} chars'
+        minlength: 'At least {0} chars',
+        maxlength: 'Maximum {0} chars'
     });
 
     $.fn.bindEnter = function () {

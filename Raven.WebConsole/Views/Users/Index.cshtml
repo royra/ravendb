@@ -1,6 +1,28 @@
 ﻿@using Raven.WebConsole
 @using Raven.WebConsole.Controllers
+@using Raven.WebConsole.ViewModels
 @model Raven.WebConsole.ViewModels.UsersViewModel
+
+@helper GetAllowedDbs(UsersViewModel.User user) {
+    if (user.AccessToAllDatabases)
+    {
+        <text>(all)</text>
+    } else if (user.Databases.Any())
+    {
+        var s = string.Join(", ", user.Databases.Select(d => d.Name));
+        if (s.Length > 30)
+        {
+            var last = s.LastIndexOf(',');
+            s = s.Substring(0, last) + ", ...";
+        }
+        
+        Write(s);
+    } 
+    else
+    {
+        <text>(none)</text>    
+    }
+}
 
 @{
     ViewBag.Title = "Users";
@@ -40,7 +62,7 @@
                     <span class="name">Admin:</span><span class="value" data-is-admin="@Json.Encode(user.IsAdmin)">@(user.IsAdmin ? "Yes" : "No")</span>
                 </li>
                 <li class="dbAccess changeable">
-                    <span class="name">Allowed DBs:</span><span class="value">@(user.AccessToAllDatabases ? "(all)" : string.Join(", ", user.Databases.Select(d => d.Name)))</span>
+                    <span class="name">Allowed DBs:</span><span class="value">@GetAllowedDbs(user)</span>
                 </li>
             </ul>
             <ul class="buttons">
@@ -160,7 +182,7 @@
     </form>
 }
 
-< type="text/javascript">
+<script type="text/javascript">
     var usersData = @Html.Raw(Json.Encode(Model.Users));
     var getUserData = function(userName) {
         var userData = $.grep(usersData, function(u) { return u.Name == userName; })[0];
@@ -242,8 +264,11 @@
             var setBoolOnChange = function(e, property) {
                 var button = $(e.target);
                 var index = button.closest('.perm').data('index');
+
                 var d = userData.Databases[index];
-                d[property] = button.is(':checked');
+                if (d !== undefined) {
+                    d[property] = button.is(':checked');
+                }
             };
             
             dialog.find('input.isAdmin').button().on('change', function (e) { setBoolOnChange(e, 'IsAdmin'); });
@@ -266,7 +291,8 @@
                     populateDbAccessDialogForUser();
                 });
 
-            dialog.find('.removePermissionButton')
+            var removeButtons = dialog.find('.removePermissionButton');
+            removeButtons
                 .button({
                     icons: { primary: 'ui-icon-circle-minus' },
                     text: false
@@ -295,7 +321,7 @@
 
                     perm.fadeOut('fast', function() { populateDbAccessDialogForUser(); });
                 });
-            
+
             dialog.find('input[name=name]').val(userName);
         };
 

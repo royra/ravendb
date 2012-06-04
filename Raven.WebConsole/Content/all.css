@@ -1548,6 +1548,7 @@ ul.flach.user>li:nth-child(2n+1) {
 }
 
 ul.flach>li>.name {
+    color: #9A002B;
     font-size: 16px;
     background-repeat: no-repeat;
     background-position: left;
@@ -1558,6 +1559,10 @@ ul.flach>li>.name {
     vertical-align: middle;
     text-shadow: 1px 1px #CCCCCC;
     text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 155px;
 }
 
 ul.flach.db>li:hover>.name {

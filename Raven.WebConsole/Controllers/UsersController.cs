@@ -134,8 +134,6 @@ namespace Raven.WebConsole.Controllers
 
             var perms = GetPermsFromForm(form);
 
-            if (perms == null || perms.Count == 0) throw new ArgumentNullException("perms");
-
             var user = GetUser(userName);
             perms.SetInAuthenticationUser(user);
 

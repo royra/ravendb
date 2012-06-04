@@ -16,7 +16,7 @@
     @foreach (var db in Model.Databases)
     {
         <li class="db" data-db="@db.Name">
-            <a class="name link-on-hover" title="Click to open studio" href="@(Model.BaseUrl)/raven/studio.html#/home?database=@db.Name">@db.Name</a>
+            <a class="name link-on-hover" title="Click to open studio for @db.Name" href="@(Model.BaseUrl)/raven/studio.html#/home?database=@db.Name">@db.Name</a>
             <ul class="props">
                 <li>
                     <span class="name">Size:</span><span class="value">@db.SizeMb MB</span>
@@ -185,11 +185,17 @@
                 }
         });
 
+        $.validator.addMethod('dbName', function(v) {
+            return ( /[a-z][a-z0-9_-]*/i ).test(v);
+        }, 'Must begin with letter and consist of letters, digits, underscores and hyphens only');
+
         $('#newDialog form').validate({
             rules: {
                 name: {
                     required: true,
                     minlength: 3,
+                    maxlength: 30,
+                    dbName: true,
                     remote: {url: "@Url.Action("ValidateName")", cache: false}
                 }
             }
