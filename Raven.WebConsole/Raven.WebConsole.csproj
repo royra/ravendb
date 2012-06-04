@@ -85,7 +85,6 @@
     <Compile Include="ViewModels\DatabasePermissionsViewModel.cs" />
     <Compile Include="ViewModels\UsersViewModel.cs" />
     <Compile Include="Utils\DecimalExtensions.cs" />
-    <Compile Include="Utils\MyWebClient.cs" />
     <Compile Include="Controllers\ReplicationController.cs" />
     <Compile Include="Controllers\UsersController.cs" />
     <Compile Include="Utils\DateTimeExtensions.cs" />

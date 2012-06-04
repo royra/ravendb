@@ -339,6 +339,11 @@ namespace Raven.Client.Connection
 	    /// Returns the database size in bytes
 	    /// </summary>
 	    long GetSize();
+
+	    /// <summary>
+	    /// Asyncronously starts a backup operation to the specified directory
+	    /// </summary>
+	    void StartBackup(string destinationDirectory, bool incremental);
 	}
 }
 #endif

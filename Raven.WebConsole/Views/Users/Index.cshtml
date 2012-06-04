@@ -160,7 +160,7 @@
     </form>
 }
 
-<script type="text/javascript">
+< type="text/javascript">
     var usersData = @Html.Raw(Json.Encode(Model.Users));
     var getUserData = function(userName) {
         var userData = $.grep(usersData, function(u) { return u.Name == userName; })[0];

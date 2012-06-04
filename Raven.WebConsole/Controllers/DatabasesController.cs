@@ -19,15 +19,13 @@ namespace Raven.WebConsole.Controllers
     public class DatabasesController : ContentController
     {
         private readonly IDocumentStore store;
-        private readonly IWebClient webClient;
         private readonly IDocumentSession session;
         private int MAX_DATABASES = 1000;
 
-        public DatabasesController(IDocumentStore store, IWebClient webClient, IDocumentSession session)
+        public DatabasesController(IDocumentStore store, IDocumentSession session)
             : base(session)
         {
             this.store = store;
-            this.webClient = webClient;
             this.session = session;
         }
 
@@ -121,13 +119,13 @@ namespace Raven.WebConsole.Controllers
             if (name == null) throw new ArgumentNullException("name");
             if (path == null) throw new ArgumentNullException("path");
 
+            var incremental = Request.Form["incremental"] != null;
+
             var validation = BackupPathOk(path);
             if (!validation.IsValid)
                 throw new ClientVisibleException {ClientVisibleMessage = validation.ErrorMessage};
-            
-            var url = string.Format("{0}/databases/{1}/admin/backup", store.Url, name);
-            var json = new {BackupLocation = path};
-            webClient.PostJson(url, json);
+
+            DatabaseCommands.ForDatabase(name).StartBackup(path, incremental);
 
             return new EmptyResult();
         }

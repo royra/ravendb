@@ -693,6 +693,14 @@ namespace Raven.Client.Embedded
             return database.GetTotalSizeOnDisk();
         }
 
+        /// <summary>
+        /// Asyncronously starts a backup operation to the specified directory
+        /// </summary>
+        public void StartBackup(string destinationDirectory, bool incemental)
+        {
+            database.StartBackup(destinationDirectory, incemental);
+        }
+
 		#endregion
 
 		/// <summary>

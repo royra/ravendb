@@ -1411,6 +1411,27 @@ Failed to get in touch with any of the " + (1 + threadSafeCopy.Count) + " Raven 
             return responseJson.Value<long>("DatabaseSize");
         }
 
+        /// <summary>
+        /// Asyncronously starts a backup operation to the specified directory
+        /// </summary>
+        public void StartBackup(string destinationDirectory, bool incremental)
+        {
+            var metadata = new RavenJObject();
+            var actualUrl = string.Format("{0}/admin/backup", url);
+            
+            if (incremental)
+                actualUrl = actualUrl + "?incremental=true";
+
+            var request = jsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(this, actualUrl, "POST", metadata, credentials, convention)
+                    .AddOperationHeaders(OperationsHeaders));
+
+            var requestObject = new {BackupLocation = destinationDirectory};
+            var json = JsonConvert.SerializeObject(requestObject);
+            request.Write(json);
+            request.ReadResponseString();
+        }
+
 		#endregion
 
 		/// <summary>

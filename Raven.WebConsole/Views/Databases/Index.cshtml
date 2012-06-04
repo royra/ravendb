@@ -21,7 +21,7 @@
                 <li>
                     <span class="name">Size:</span><span class="value">@db.SizeMb MB</span>
                 </li>
-                <li>
+                <li class="lastBackup">
                     <span class="name">Last backup:</span><span class="value"><span class="humaneDate" data-date="@db.LastBackup.ToJavascriptDate()"></span></span>
                 </li>
             </ul>
@@ -37,26 +37,6 @@
     }
 </ul>
 
-<script type="text/javascript">
-    $(document).ready(function () {
-        var updateDates = function () {
-            $('.humaneDate').each(function() {
-                var $t = $(this);
-                var d = $t.data('date');
-                var s = d == '' ? 'Never' : humaneDate(new Date(d));
-                $t.html(s);
-            });
-        };
-
-        setTimeout(function () {
-            updateDates();
-            setTimeout(updateDates, 60 * 1000);
-        });
-
-        updateDates();
-    });
-</script>
-
 <div id="newDialog">
     <form action="@Url.Action("New")" method="post" style="margin-top: 20px; margin-bottom: 20px">
         <fieldset>
@@ -67,14 +47,18 @@
     </form>
 </div>
 
-<div id="backupDialog">
+<div id="backupDialog" style="display: none">
     <form action="@Url.Action("Backup")" method="post" style="margin-top: 20px; margin-bottom: 20px">
         <fieldset>
             <legend></legend>
             <table>
                 <tr>
-                    <td><label for="path">Path: </label></td>
-                    <td><input type="text" name="path" /></td>
+                    <td><label for="backupPath">Path: </label></td>
+                    <td><input type="text" name="path" id="backupPath"/></td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td><input type="checkbox" name="incremental" id="backupIsIncremental"/> <label for="backupIsIncremental">Incremental backup</label></td>
                 </tr>
             </table>
             <input type="hidden" name="name"/>
@@ -103,6 +87,21 @@
 <script type="text/javascript">
     $(document).ready(function () {
 
+        var updateDates = function () {
+            $('.humaneDate').each(function() {
+                var $t = $(this);
+                var d = $t.data('date');
+                var s = d == '' ? 'Never' : humaneDate(new Date(d));
+                $t.html(s);
+            });
+        };
+
+        setTimeout(function () {
+            updateDates();
+            setTimeout(updateDates, 60 * 1000);
+        });
+
+        updateDates();
         $('#newButton').button({ icons: { primary: 'ui-icon-plus'} });
         $('.button.delete')
             .on('click', function(e) {
@@ -140,22 +139,24 @@
                 var db = $(e.target).parents('.db').data('db');
                 var dialog = $('#backupDialog');
                 dialog.find('input[name=name]').val(db);
-                dialog.dialog('open');
+                
+                dialog.dialog({
+                    modal: true,
+                    title: 'Backup database ' + db,
+                    width: 400,
+                    buttons: {
+                        'Start Backup': function () {
+                            $(this).find('form').submit();
+                        },
+                        'Cancel': function () {
+                            $(this).dialog('destroy');
+                        }
+                    }
+                });
+                
             });
 
         $('#backupDialog form')
-            .ajaxForm({
-                beforeSubmit: function (vals, form) {
-                    return form.valid();
-                },
-                success: function(responseText, statusText, xhr, form) {
-                    var db = form.find('input[name=name]').val();
-                    raven.ui.displayMessage($.format('Backup for database {0} has started', db));
-                },
-                error: function (jqXHR, textStatus, errorThrown) {
-                    raven.ui.displayMessage($.format('There was an error backing up the database: {0}', errorThrown), 'warning');
-                }
-            })
             .validate({
                 rules: {
                     path: {
@@ -164,24 +165,24 @@
                     }
                 },
                 submitHandler: function (form) {
-                    $('#backupDialog').dialog('close');
-                    $(form).ajaxSubmit();
+                    $(form).ajaxSubmit({
+                        beforeSubmit: function (vals, form) {
+                            return form.valid();
+                        },
+                        success: function(responseText, statusText, xhr, form) {
+                            var db = form.find('input[name=name]').val();
+                            raven.ui.displayMessage($.format('Backup for database {0} has started', db));
+                            var lastBackup = $(".db[data-db='" + db + "'] .lastBackup");
+                            lastBackup.find(".humaneDate").data('date', new Date().getTime());
+                            updateDates();
+                            lastBackup.effect('highlight');
+                        },
+                        error: function (jqXHR, textStatus, errorThrown) {
+                            raven.ui.displayMessage($.format('There was an error backing up the database: {0}', errorThrown), 'warning');
+                        }
+                    });
+                    $('#backupDialog').dialog('destroy');
                 }
-        });
-
-        $('#backupDialog').dialog({
-            autoOpen: false,
-            modal: true,
-            title: 'Backup database',
-            width: 400,
-            buttons: {
-                'Start Backup': function () {
-                    $(this).find('form').submit();
-                },
-                'Cancel': function () {
-                    $(this).dialog('close');
-                }
-            }
         });
 
         $('#newDialog form').validate({

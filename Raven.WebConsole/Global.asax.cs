@@ -66,7 +66,6 @@ namespace Raven.WebConsole
                                  }).SingleInstance();
 
             builder.Register(cb => cb.Resolve<IDocumentStore>().OpenSession()).InstancePerLifetimeScope();
-            builder.RegisterType(typeof (MyWebClient)).AsImplementedInterfaces().InstancePerLifetimeScope();
 
             var container = builder.Build();
             DependencyResolver.SetResolver(new AutofacDependencyResolver(container));
