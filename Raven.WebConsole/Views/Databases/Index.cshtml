@@ -180,9 +180,17 @@
 
         var handleSearchQuery = function() {
             waitingForSearchKey = false;
+            var query = $('#searchBox').val();
+            
+            if (query == prevSearchBoxVal) {
+                return;
+            }
+
+            prevSearchBoxVal = query;
             $('.flach.db').empty();
             $('.loading').show();
-            modelState.query = $('#searchBox').val();
+            
+            modelState.query = query;
             modelState.start = 0;
             
             $.getJSON("@Url.Action("Index")", 
@@ -193,8 +201,9 @@
                     renderDatabases(response.Databases);
                 });
         };
-        
-        if ($('#searchBox').val() !== '') {
+
+        var prevSearchBoxVal = $('#searchBox').val();
+        if (prevSearchBoxVal !== '') {
             handleSearchQuery();
         }
 
