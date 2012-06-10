@@ -34,12 +34,29 @@
         var messageDiv = $('#content .message.block');
 
         if (animate) {
-            messageDiv.slideUp('fast', function () { messageDiv.remove(); });
+            messageDiv.slideUp('fast', function() { messageDiv.remove(); });
         } else {
             messageDiv.remove();
         }
+    };
 
-    };    
+    raven.utils = raven.utils || { };
+    raven.utils.deserializeDate = (function () {
+        var toDateRe = new RegExp("^/Date\\((\\d+)\\)/$");
+        return function (s) {
+            if (!s) {
+                return null;
+            }
+
+            var matches = s.match(toDateRe);
+
+            if (matches.length != 2) {
+                throw new Error('Invalid serialized DateTime value: "' + s + '"');
+            }
+
+            return new Date(parseInt(matches[1]));
+        };
+    })();
 
 </script>
 

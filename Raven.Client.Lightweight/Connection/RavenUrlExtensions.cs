@@ -35,9 +35,14 @@ namespace Raven.Client.Connection
 		//    return url + "/static/" + HttpUtility.HtmlEncode(key);
 		//}
 
-		public static string Databases(this string url, int pageSize)
+		public static string Databases(this string url, int pageSize, int start=0)
 		{
-			return url + "/databases/?pageSize=" + pageSize;
+			var result = url + "/databases/?pageSize=" + pageSize;
+            
+            if (start != 0)
+                result = result + "&start=" + start;
+
+		    return result;
 		}
 
 		public static string SilverlightEnsuresStartup(this string url)

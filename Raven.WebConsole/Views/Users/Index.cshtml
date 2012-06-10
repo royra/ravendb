@@ -34,12 +34,41 @@
         #dbAccessTypes .dbAccessType {
             line-height: 2.2em;
         }
+        
         #dbAccessTypes .dbAccessType input{
             margin-top: -1px;
         }
-        #dbPerms input[type=checkbox] {
-            margin-top: -1px;
-            width: 50px;
+        
+        #dbPerms {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        #dbPerms .perm {
+            width: 460px;
+            line-height: 2.8em;
+        }        
+        
+        #dbPerms .perm .value {
+            width: 250px;
+            display: inline-block;
+        }
+        
+        #dbPerms .perm .name {
+            width: 180px;
+            vertical-align: middle;
+            display: inline-block;
+            background-image: url(/images/db-16px.png);
+            background-position: left;
+            background-repeat: no-repeat;
+            padding-left: 20px;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        #dbAccessAdvanced {
+            margin-left: 20px;
         }
     </style>
 
@@ -149,10 +178,10 @@
         <input type="hidden" name="name"/>
         <fieldset>
             <legend></legend>
-            <table id="dbPerms">
+            <div id="dbPerms" style="width:100%;">
                 {{#perms}}
-                    <tr class="perm" data-index="{{index}}" >
-                        <td class="name">
+                    <div class="perm" data-index="{{index}}" >
+                        <span class="name">
                             {{#name}}
                                 <input type="hidden" name="perms[{{index}}].Name" value="{{name}}"/>
                                 {{name}}
@@ -164,20 +193,20 @@
                                     {{/dbs}}
                                 </select>
                             {{/activeAddRow}}
-                        </td>
-                        <td>
+                        </span>
+                        <span class="value">
                             <input type="checkbox" class="isAdmin" name="perms[{{index}}].IsAdmin" id="perm{{index}}_IsAdmin" {{#isAdmin}}checked="checked"{{/isAdmin}}/><label for="perm{{index}}_IsAdmin">Admin</label>
                             <input type="checkbox" class="isReadOnly" name="perms[{{index}}].IsReadOnly" id="perm{{index}}_IsReadOnly" {{#isReadOnly}}checked="checked"{{/isReadOnly}}/><label for="perm{{index}}_IsReadOnly">Read-only</label>
                             <a href="javascript:void(0);" class="removePermissionButton">Remove</a>
-                        </td>
-                    </tr>
+                        </span>
+                    </div>
                 {{/perms}}
                 {{#hasAddButton}}
-                    <tr class="perm">
-                        <td colspan="2"><a href="javascript:void(0);" id="addPermissionButton">Add</a></td>
-                    </tr>
+                    <div class="perm">
+                        <a href="javascript:void(0);" id="addPermissionButton">Add</a>
+                    </div>
                 {{/hasAddButton}}
-            </table>
+            </div>
         </fieldset>
     </form>
 }
@@ -196,6 +225,8 @@
         } else {
             advanced.show(); 
         }
+        
+        $('#dbAccessDialog').dialog("option", "position", "center");
     };
     
     var availableDbs = [];
@@ -477,7 +508,7 @@
                 autoOpen: false,
                 modal: true,
                 title: "Manage database access",
-                width: 500,
+                width: 550,
                 buttons: {
                     "Save": function () {
                         var formId = $('#dbAccessDialog input[name=AccessType]:checked').val() == 'All'

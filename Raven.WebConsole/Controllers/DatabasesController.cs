@@ -10,7 +10,10 @@ using Raven.Bundles.Authentication;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
+using Raven.Database;
+using Raven.Database.Config;
 using Raven.Database.Exceptions;
+using Raven.Json.Linq;
 using Raven.WebConsole.Utils;
 using Raven.WebConsole.ViewModels;
 
@@ -20,7 +23,8 @@ namespace Raven.WebConsole.Controllers
     {
         private readonly IDocumentStore store;
         private readonly IDocumentSession session;
-        private int MAX_DATABASES = 1000;
+        private const int MAX_DATABASES = 1000;
+        private const string DB_KEY_PREFIX = "Raven/Databases/";
 
         public DatabasesController(IDocumentStore store, IDocumentSession session)
             : base(session)
@@ -29,14 +33,22 @@ namespace Raven.WebConsole.Controllers
             this.session = session;
         }
 
-        public override ActionResult Index()
+        public ActionResult Index(string query = "", int pageSize = 10, int start = 0)
         {
             var baseUrl = store.Url;
 
-            var databases = DatabaseCommands.GetDatabaseNames(MAX_DATABASES)
-                .OrderBy(n => n)
-                .Select(delegate(string dbName)
+            var keyStartsWith = DB_KEY_PREFIX + query;
+            var dbs = DatabaseCommands
+                .StartsWith(keyStartsWith, start, pageSize + 1)
+                .Select(x => new
+                                 {
+                                     Name = x.Metadata.Value<string>("@id").Replace(DB_KEY_PREFIX, ""),
+                                     Data = x.DataAsJson
+                                 })
+                .OrderBy(d => d.Name)
+                .Select(d =>
                             {
+                                var dbName = d.Name;
                                 var dbSizeBytes = DatabaseCommands.ForDatabase(dbName).GetSize();
 
                                 BackupStatus backupStatus;
@@ -46,15 +58,22 @@ namespace Raven.WebConsole.Controllers
                                 return new DatabasesViewModel.Database(
                                     dbName,
                                     dbSizeBytes.GetTruncatedMbytes(),
-                                    new[] {"Replication", "Versioning"},
+                                    d.Data.Value<string[]>("Bundles") ?? Enumerable.Empty<string>(),
                                     backupStatus != null ? (DateTime?)backupStatus.Started : null);
-                            });
+                            })
+                .ToArray();
 
-            return View(new DatabasesViewModel
-                            {
-                                BaseUrl = baseUrl,
-                                Databases = databases,
-                            });
+            var model = new DatabasesViewModel
+            {
+                BaseUrl = baseUrl,
+                Databases = dbs.Take(pageSize),
+                More = dbs.Length > pageSize,
+            };
+
+            if ("json".Equals(Request.QueryString["output"], StringComparison.InvariantCultureIgnoreCase))
+                return new JsonResult {Data = model, JsonRequestBehavior = JsonRequestBehavior.AllowGet};
+            
+            return View(model);
         }
 
         private static readonly Regex filterStackTrace = new Regex(@"\n\s+at .*", RegexOptions.Multiline);
@@ -92,9 +111,9 @@ namespace Raven.WebConsole.Controllers
             if ("default".Equals(name, StringComparison.InvariantCultureIgnoreCase))
                 return new JQueryValidateRemoteResult("The name 'default' is reserved for the system default database");
 
-            var existingNames = DatabaseCommands.GetDatabaseNames(MAX_DATABASES);
+            var existingName = session.Load<dynamic>(DB_KEY_PREFIX + name);
 
-            if (existingNames.Any(n => name.Equals(n, StringComparison.InvariantCultureIgnoreCase)))
+            if (existingName != null)
                 return new JQueryValidateRemoteResult("Already exists");
 
             return new JQueryValidateRemoteResult();
@@ -145,8 +164,15 @@ namespace Raven.WebConsole.Controllers
             return new JsonResult
                        {
                            JsonRequestBehavior = JsonRequestBehavior.AllowGet,
-                           Data = DatabaseCommands.GetDatabaseNames(MAX_DATABASES)
+                           Data = DatabaseCommands.GetDatabaseNames(MAX_DATABASES, 0)
                        };
+        }
+
+        public ActionResult Restore(string name, string from)
+        {
+            // TODO: get the configuration from somewhere
+            //DocumentDatabase.Restore(new RavenConfiguration(), from, DatabaseCommands.ForDatabase(name).GetStatistics());
+            return new EmptyResult();
         }
     }
 }

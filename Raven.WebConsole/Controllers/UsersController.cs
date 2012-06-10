@@ -20,7 +20,7 @@ namespace Raven.WebConsole.Controllers
             this.session = session;
         }
 
-        public override ActionResult Index()
+        public ActionResult Index()
         {
             var users = session.Advanced.LoadStartingWith<AuthenticationUser>(Keys.Database.AUTH_USERS_PREFIX).ToList();
 

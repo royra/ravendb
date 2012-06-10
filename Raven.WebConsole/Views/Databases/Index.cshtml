@@ -1,4 +1,5 @@
-﻿@using Raven.WebConsole.Utils
+﻿@using Raven.WebConsole
+@using Raven.WebConsole.Utils
 @model Raven.WebConsole.ViewModels.DatabasesViewModel
 
 @{
@@ -6,36 +7,59 @@
     Layout = "~/Views/Shared/ContentPage.cshtml";
 }
 
+@section head {
+    <script src="@Url.Content("~/Scripts/mustache.js")" type="text/javascript"></script>
+    <style type="text/css">
+    </style>
+}
+
+
 <div class="head">
     <h1 style="float:left;">@ViewBag.Title</h1>
+
+	<form class="search-form" action="#">
+		<fieldset>
+			<span class="field"><input type="text" placeholder="Search" id="searchBox"></span>
+			<input class="submit" type="image" src="images/search-btn.png" alt="Search">
+		</fieldset>
+	</form>
+
     <a id="newButton" class="button" style="float:right;" href="javascript:void(0);">Create a new database</a>
     <div style="float:none;clear:both"></div>
 <div/>
 
-<ul class="flach db">
-    @foreach (var db in Model.Databases)
-    {
-        <li class="db" data-db="@db.Name">
-            <a class="name link-on-hover" title="Click to open studio for @db.Name" href="@(Model.BaseUrl)/raven/studio.html#/home?database=@db.Name">@db.Name</a>
+<ul class="flach db"></ul>
+
+<div class="loading" style="display: none;width: 100%">
+    <img src="/images/ajax-loader.gif" alt="loading..." style="margin-left: auto; margin-right: auto; width: 55px; margin-bottom: 20px; display: block"/>    
+</div>
+
+@using (Html.BeginHtmlTemplate("dbsTemplate"))
+{
+    <text>
+    {{#dbs}}
+        <li class="db" data-db="{{name}}">
+            <a class="name link-on-hover" title="Click to open studio for {{name}}" href="@(Model.BaseUrl)/raven/studio.html#/home?database={{name}}">{{name}}</a>
             <ul class="props">
                 <li>
-                    <span class="name">Size:</span><span class="value">@db.SizeMb MB</span>
+                    <span class="name">Size:</span><span class="value">{{size}} MB</span>
                 </li>
                 <li class="lastBackup">
-                    <span class="name">Last backup:</span><span class="value"><span class="humaneDate" data-date="@db.LastBackup.ToJavascriptDate()"></span></span>
+                    <span class="name">Last backup:</span><span class="value"><span class="humaneDate" data-date="{{lastBackup}}"></span></span>
                 </li>
             </ul>
             <ul class="buttons">
                 <li>
                     <a class="delete button" href="javascript:void(0);">Delete</a>
-                    <form style="display: none" action="@Url.Action("Delete", new {name=db.Name})" method="post"></form>
+                    <form style="display: none" action="@(Url.Action("Delete"))?name={{name}}" method="post"></form>
                 </li>
                 <li><a class="backup button" href="javascript:void(0);">Backup</a></li>
                 <li><a class="restore button" href="javascript:void(0);">Restore</a></li>
             </ul>
         </li>
-    }
-</ul>
+    {{/dbs}}
+    </text>
+}
 
 <div id="newDialog">
     <form action="@Url.Action("New")" method="post" style="margin-top: 20px; margin-bottom: 20px">
@@ -66,6 +90,25 @@
     </form>
 </div>
 
+<div id="restoreDialog" style="display: none">
+    <form action="@Url.Action("Restore")" method="post" style="margin-top: 20px; margin-bottom: 20px">
+        <fieldset>
+            <legend></legend>
+            <table>
+                <tr>
+                    <td><label for="restoreFrom">Path of backup files: </label></td>
+                    <td><input type="text" name="from" id="restoreFrom"/></td>
+                </tr>
+                <tr>
+                    <td><label for="restoreTo">Database directory: </label></td>
+                    <td><input type="text" name="to" id="restoreTo"/></td>
+                </tr>
+            </table>
+            <input type="hidden" name="name"/>
+        </fieldset>
+    </form>
+</div>
+
 <div id="deleteConfirmationDialog" style="display: none">
     <form action="@Url.Action("Delete")" method="post" style="margin-top: 20px; margin-bottom: 20px">
         <strong>This is a destructive operation with no undo.</strong>
@@ -86,6 +129,13 @@
 
 <script type="text/javascript">
     $(document).ready(function () {
+        var model = @Html.Raw(Json.Encode(Model));
+
+        var modelState = {
+            query: '',
+            pageSize: 10,
+            start: 0
+        };
 
         var updateDates = function () {
             $('.humaneDate').each(function() {
@@ -96,12 +146,87 @@
             });
         };
 
+        var renderDatabases = function(modelDatabases, append) {
+            var template = $('#dbsTemplate').html();
+            var viewModel = {
+                dbs: $.map(modelDatabases, function (db) {
+                    return {
+                        name: db.Name,
+                        size: db.SizeMb,
+                        lastBackup: db.LastBackup ? new Date(raven.utils.deserializeDate(db.LastBackup)).getTime() : ""
+                    };
+                })                  
+            };
+            var ul = $('.flach.db');
+            var rendered = Mustache.render(template, viewModel);
+            
+            if (append) {
+                ul.append($(rendered));
+            } else {
+                ul.html(rendered);
+            }
+
+            updateDates();
+        };
+
+        renderDatabases(model.Databases);
+        
         setTimeout(function () {
             updateDates();
             setTimeout(updateDates, 60 * 1000);
         });
 
-        updateDates();
+        var waitingForSearchKey = false;
+
+        var handleSearchQuery = function() {
+            waitingForSearchKey = false;
+            $('.flach.db').empty();
+            $('.loading').show();
+            modelState.query = $('#searchBox').val();
+            modelState.start = 0;
+            
+            $.getJSON("@Url.Action("Index")", 
+                { output: "json",  query: modelState.query }, 
+                function(response) {
+                    $('.loading').hide();
+                    model = response;
+                    renderDatabases(response.Databases);
+                });
+        };
+        
+        if ($('#searchBox').val() !== '') {
+            handleSearchQuery();
+        }
+
+        $('#searchBox').on('keyup', function() {
+            if (waitingForSearchKey)
+                return;
+
+            waitingForSearchKey = true;
+            setTimeout(handleSearchQuery, 200);
+        });
+
+        var waitingForScroll = false;
+        $(window).scroll(function() {
+            if (model.More && !waitingForScroll && ($(window).scrollTop() > ($(document).height() - $(window).height()) - 200)) {
+                waitingForScroll = true;
+                $('.loading').show();
+                modelState.start += modelState.pageSize;
+                $.getJSON("@Url.Action("Index")", 
+                    { output: "json",  query: modelState.query, start: modelState.start, pageSize: modelState.pageSize }, 
+                    function(response) {
+                        $('.loading').hide();
+                        waitingForScroll = false;
+                        for(var i=0; i<response.Databases.length; ++i) {
+                            model.Databases.push(response.Databases[i]);
+                        }
+
+                        model.More = response.More;
+                        renderDatabases(response.Databases, true);
+                    });
+            }
+        });
+        
         $('#newButton').button({ icons: { primary: 'ui-icon-plus'} });
         $('.button.delete')
             .on('click', function(e) {

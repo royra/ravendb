@@ -52,7 +52,7 @@ input, textarea, select {
 	padding:0 2px 0 0;
 	width:961px;
 }
-#topbar .search-form .field {
+.search-form .field {
 	float:left;
 	background:url(../images/search-field.png) no-repeat;
 	width:161px;
@@ -60,7 +60,7 @@ input, textarea, select {
 	padding:0 12px;
 	margin:0 8px 0 0;
 }
-#topbar .search-form .field input {
+.search-form .field input {
 	float:left;
 	padding:4px 0;
 	margin:0;
@@ -69,7 +69,7 @@ input, textarea, select {
 	border:0;
 	outline:none;
 }
-#topbar .search-form .submit { float:left;}
+.search-form .submit { float:left;}
 #topbar nav { float:left;}
 #topbar .top-nav {
 	float:left;
@@ -209,9 +209,8 @@ input, textarea, select {
 .soc-nav a.github:hover { background-position:-96px 100%;}
 .search-form {
 	float:right;
-	padding:8px 20px 0;
+	padding:4px 0 0 40px;
 	height:31px;
-	background:url(../images/sep01.gif) no-repeat;
 }
 #main {
 	width:100%;
@@ -1527,23 +1526,11 @@ ul.flach>li {
     border: 1px solid #333333;
     box-shadow: 3px 3px 3px 3px #cccccc;
     border-radius: 3px;
-}
-
-ul.flach.db>li {
     height: 100px;
     display: inline-block;
 }
 
-ul.flach.db>li:nth-child(2n+1) {
-    margin-right: 50px;
-}
-
-ul.flach.user>li {
-    height: 100px;
-    display: inline-block;
-}
-
-ul.flach.user>li:nth-child(2n+1) {
+ul.flach>li:nth-child(2n+1) {
     margin-right: 50px;
 }
 
@@ -1613,11 +1600,9 @@ ul.flach ul.buttons .button {
     right: 10px;
 }
 
-
 ul.flach>li:hover ul.buttons .button {
     visibility: visible;
 }
-
 
 ul.flach ul.buttons li {
     float: left;
@@ -1646,14 +1631,3 @@ label.error {
     margin-left: 10px;
 }
 
-#dbPerms .perm .name {
-    width: 100px;
-    background-image: url(/images/db-16px.png);
-    background-position: left;
-    background-repeat: no-repeat;
-    padding-left: 20px;
-}
-
-#dbAccessAdvanced {
-    margin-left: 20px;
-}

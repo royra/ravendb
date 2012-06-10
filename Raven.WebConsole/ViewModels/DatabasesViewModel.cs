@@ -7,6 +7,7 @@ namespace Raven.WebConsole.ViewModels
     {
         public IEnumerable<Database> Databases { get; set; }
         public string BaseUrl { get; set; }
+        public bool More { get; set; }
 
         public class Database
         {

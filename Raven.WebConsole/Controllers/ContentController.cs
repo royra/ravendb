@@ -66,10 +66,5 @@ namespace Raven.WebConsole.Controllers
         {
             Info, Note, Warning, Tip
         }
-
-        public virtual ActionResult Index()
-        {
-            return View();
-        }
     }
 }
