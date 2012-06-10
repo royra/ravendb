@@ -7,15 +7,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
-using System.Text;
 using System.Threading;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
 using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
 using Raven.Imports.Newtonsoft.Json.Linq;
@@ -32,7 +27,6 @@ using Raven.Client.Document;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Indexes;
-using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Json.Linq;
 
 namespace Raven.Client.Connection
@@ -1385,7 +1379,7 @@ namespace Raven.Client.Connection
             var requestObject = new {BackupLocation = destinationDirectory};
             var json = JsonConvert.SerializeObject(requestObject);
             request.Write(json);
-            request.ReadResponseString();
+            request.ExecuteRequest();
         }
 
 		#endregion

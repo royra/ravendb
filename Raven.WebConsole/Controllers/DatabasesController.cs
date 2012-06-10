@@ -1,19 +1,12 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Text.RegularExpressions;
 using System.Web.Mvc;
-using Newtonsoft.Json;
 using Raven.Abstractions.Data;
-using Raven.Bundles.Authentication;
 using Raven.Client;
 using Raven.Client.Connection;
 using Raven.Client.Extensions;
-using Raven.Database;
-using Raven.Database.Config;
-using Raven.Database.Exceptions;
-using Raven.Json.Linq;
 using Raven.WebConsole.Utils;
 using Raven.WebConsole.ViewModels;
 
