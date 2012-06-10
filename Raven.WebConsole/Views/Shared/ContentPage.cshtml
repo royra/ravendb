@@ -1,0 +1,107 @@
+﻿@using System.Linq.Expressions
+@using Raven.WebConsole
+@using Raven.WebConsole.Controllers
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section LoggedInUser {
+    <div class="login-box registered">Hello @ViewBag.User | @Html.ActionLink("Logout", "Logout", "Home")</div>
+}
+
+@section head {
+    @RenderSection("head", false)
+}
+
+<script type="text/javascript">
+    var raven = raven || {};
+    raven.ui = raven.ui || {};
+
+    raven.ui.displayMessage = function (text, level, hidePrevious) {
+        level = level || 'info';
+        hidePrevious = hidePrevious || true;
+
+        if (hidePrevious) {
+            raven.ui.removeMessage(false);
+        }
+
+        var messageDiv = $('<div/>').html($('<span/>').html(text)).addClass(level + '-block').addClass('message').addClass('block');
+        $('#content').prepend(messageDiv);
+    };
+
+    raven.ui.removeMessage = function (animate) {
+        animate = animate || true;
+        var messageDiv = $('#content .message.block');
+
+        if (animate) {
+            messageDiv.slideUp('fast', function() { messageDiv.remove(); });
+        } else {
+            messageDiv.remove();
+        }
+    };
+
+    raven.utils = raven.utils || { };
+    raven.utils.deserializeDate = (function () {
+        var toDateRe = new RegExp("^/Date\\((\\d+)\\)/$");
+        return function (s) {
+            if (!s) {
+                return null;
+            }
+
+            var matches = s.match(toDateRe);
+
+            if (matches.length != 2) {
+                throw new Error('Invalid serialized DateTime value: "' + s + '"');
+            }
+
+            return new Date(parseInt(matches[1]));
+        };
+    })();
+
+</script>
+
+<nav id="main-nav">
+	<ul id="nav">
+        @helper TopMenuItem(string n, params string[] s) {
+			<li @if (n == ViewBag.Title) { <text>class="active"</text>}>
+				<a href="@Url.Action("Index", n)"><span><em>@n</em></span></a>
+            @if (s.Length > 0)
+            {
+			<div class="drop">
+				<ul>
+                    @foreach(var b in s)
+                    {
+                        <li><a href="@Url.Action(b, n)"><span><em>@b</em></span></a></li>    
+                    }
+				</ul>
+				<div class="b"></div>
+			</div>
+            }
+			</li>
+        }
+
+        @TopMenuItem("Databases")
+        @TopMenuItem("Users")
+        @TopMenuItem("Replication")
+        @TopMenuItem("Bundles")
+        
+	</ul>
+</nav>
+
+<div class="col-set">
+    <div id="content">
+        @if (ViewBag.Message != null)
+        {
+            var messageLevel = ViewBag.MessageLevel as string;
+            messageLevel = (messageLevel ?? "info").ToLower();
+
+            <div class="message block @messageLevel-block">
+                <span>@ViewBag.Message</span>
+            </div>
+        }
+
+        @RenderBody()
+    </div>
+
+</div>
+

@@ -231,7 +231,7 @@ namespace Raven.Client.Embedded
 		/// Get tenant database names (Server/Client mode only)
 		/// </summary>
 		/// <returns></returns>
-		public string[] GetDatabaseNames(int pageSize)
+		public string[] GetDatabaseNames(int pageSize, int start)
 		{
 			throw new InvalidOperationException("Embedded mode does not support multi-tenancy");
 		}
@@ -693,6 +693,22 @@ namespace Raven.Client.Embedded
 		{
 			throw new NotSupportedException("Multi GET is only support for Server/Client, not embedded");
 		}
+
+        /// <summary>
+        /// Returns the database size in bytes
+        /// </summary>
+        public long GetSize()
+        {
+            return database.GetTotalSizeOnDisk();
+        }
+
+        /// <summary>
+        /// Asyncronously starts a backup operation to the specified directory
+        /// </summary>
+        public void StartBackup(string destinationDirectory, bool incemental)
+        {
+            database.StartBackup(destinationDirectory, incemental);
+        }
 
 		#endregion
 

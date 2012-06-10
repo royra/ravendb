@@ -14,8 +14,11 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 using Raven.Abstractions.Json;
 using Raven.Imports.Newtonsoft.Json;
+using Raven.Imports.Newtonsoft.Json.Linq;
 using Raven.Imports.Newtonsoft.Json.Bson;
 using Raven.Abstractions;
 using Raven.Abstractions.Commands;
@@ -452,9 +455,9 @@ namespace Raven.Client.Connection
 			ExecuteWithReplication("DELETE", operationUrl => DirectDeleteAttachment(key, etag, operationUrl));
 		}
 
-		public string[] GetDatabaseNames(int pageSize)
+		public string[] GetDatabaseNames(int pageSize, int start)
 		{
-			var result = ExecuteGetRequest("".Databases(pageSize).NoCache());
+			var result = ExecuteGetRequest("".Databases(pageSize, start).NoCache());
 
 			var json = (RavenJArray)result;
 
@@ -462,6 +465,18 @@ namespace Raven.Client.Connection
 				.Select(x => x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty))
 				.ToArray();
 		}
+
+        public dynamic GetDatabases(int pageSize, int start, string nameStartingWith)
+        {
+            var result = ExecuteGetRequest("".Databases(pageSize, start).NoCache());
+
+            var json = (RavenJArray)result;
+
+            return json
+                .ToDictionary(
+                    x =>
+                    x.Value<RavenJObject>("@metadata").Value<string>("@id").Replace("Raven/Databases/", string.Empty));
+        }
 
 		private void DirectDeleteAttachment(string key, Guid? etag, string operationUrl)
 		{
@@ -1337,7 +1352,41 @@ namespace Raven.Client.Connection
 			return jsonRequestFactory.DisableAllCaching();
 		}
 
+        /// <summary>
+        /// Returns the database size in bytes
+        /// </summary>
+        public long GetSize()
+        {
+            var metadata = new RavenJObject();
+            var actualUrl = string.Format("{0}/database/size", url);
+            var request = jsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(this, actualUrl, "GET", metadata, credentials, convention)
+                    .AddOperationHeaders(OperationsHeaders));
 
+            var responseJson = request.ReadResponseJson();
+            return responseJson.Value<long>("DatabaseSize");
+        }
+
+        /// <summary>
+        /// Asyncronously starts a backup operation to the specified directory
+        /// </summary>
+        public void StartBackup(string destinationDirectory, bool incremental)
+        {
+            var metadata = new RavenJObject();
+            var actualUrl = string.Format("{0}/admin/backup", url);
+            
+            if (incremental)
+                actualUrl = actualUrl + "?incremental=true";
+
+            var request = jsonRequestFactory.CreateHttpJsonRequest(
+                new CreateHttpJsonRequestParams(this, actualUrl, "POST", metadata, credentials, convention)
+                    .AddOperationHeaders(OperationsHeaders));
+
+            var requestObject = new {BackupLocation = destinationDirectory};
+            var json = JsonConvert.SerializeObject(requestObject);
+            request.Write(json);
+            request.ReadResponseString();
+        }
 
 		#endregion
 

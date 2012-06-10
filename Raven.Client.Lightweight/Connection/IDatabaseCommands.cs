@@ -102,7 +102,7 @@ namespace Raven.Client.Connection
 		/// Returns the names of all tenant databases on the RavenDB server
 		/// </summary>
 		/// <returns>List of tenant database names</returns>
-		string[] GetDatabaseNames(int pageSize);
+		string[] GetDatabaseNames(int pageSize, int start);
 
 		/// <summary>
 		/// Returns the names of all indexes that exist on the server
@@ -334,6 +334,16 @@ namespace Raven.Client.Connection
 		/// Force the database commands to read directly from the master, unless there has been a failover.
 		/// </summary>
 		void ForceReadFromMaster();
+
+	    /// <summary>
+	    /// Returns the database size in bytes
+	    /// </summary>
+	    long GetSize();
+
+	    /// <summary>
+	    /// Asyncronously starts a backup operation to the specified directory
+	    /// </summary>
+	    void StartBackup(string destinationDirectory, bool incremental);
 	}
 }
 #endif
