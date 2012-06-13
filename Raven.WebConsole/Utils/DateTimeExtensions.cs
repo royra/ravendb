@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.RegularExpressions;
 
 namespace Raven.WebConsole.Utils
 {
@@ -17,6 +18,20 @@ namespace Raven.WebConsole.Utils
                 return null;
 
             return d.Value.ToJavascriptDate();
+        }
+
+        private static readonly Regex parseJsonDate = new Regex(@"^/Date\(([0-9]+)\)/$");
+        public static DateTime? FromJsonDate(string s)
+        {
+            if (string.IsNullOrEmpty(s))
+                return null;
+
+            var match = parseJsonDate.Match(s);
+            if (!match.Success)
+                throw new Exception(string.Format("Invalid date format: {0}", s));
+
+            var millisecondsFromEpoch = long.Parse(match.Groups[1].Value);
+            return epoch.AddMilliseconds(millisecondsFromEpoch);
         }
     }
 }

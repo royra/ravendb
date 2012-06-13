@@ -44,15 +44,19 @@ namespace Raven.WebConsole.Controllers
                                 var dbName = d.Name;
                                 var dbSizeBytes = DatabaseCommands.ForDatabase(dbName).GetSize();
 
-                                BackupStatus backupStatus;
+                                Lazy<dynamic> backupStatus;
+                                Lazy<string> activeBundles;
                                 using (var ses = store.OpenSession(dbName))
-                                    backupStatus = ses.Load<BackupStatus>("Raven/Backup/Status");
-                                
+                                {
+                                    activeBundles = ses.Advanced.Lazily.Load<string>("Raven/ActiveBundles");
+                                    backupStatus = ses.Advanced.Lazily.Load<dynamic>("Raven/Backup/Status");
+                                }
+
                                 return new DatabasesViewModel.Database(
                                     dbName,
                                     dbSizeBytes.GetTruncatedMbytes(),
-                                    d.Data.Value<string[]>("Bundles") ?? Enumerable.Empty<string>(),
-                                    backupStatus != null ? (DateTime?)backupStatus.Started : null);
+                                    activeBundles.Value != null ? activeBundles.Value.Split(' ', ',', ';') : null,
+                                    backupStatus.Value != null ? DateTimeExtensions.FromJsonDate(backupStatus.Value.Started) : null);
                             })
                 .ToArray();
 

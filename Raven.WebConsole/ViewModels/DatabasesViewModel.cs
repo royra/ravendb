@@ -13,14 +13,14 @@ namespace Raven.WebConsole.ViewModels
         {
             public string Name { get; set; }
             public decimal SizeMb { get; set; }
-            public IEnumerable<string> Options { get; set; } 
+            public IEnumerable<string> ActiveBundles { get; set; } 
             public DateTime? LastBackup { get; set; }
 
-            public Database(string name, decimal sizeMb, IEnumerable<string> options, DateTime? lastBackup)
+            public Database(string name, decimal sizeMb, IEnumerable<string> activeBundles, DateTime? lastBackup)
             {
                 Name = name;
                 SizeMb = sizeMb;
-                Options = options;
+                ActiveBundles = activeBundles;
                 LastBackup = lastBackup;
             }
         }

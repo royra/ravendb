@@ -47,6 +47,9 @@
                 <li class="lastBackup">
                     <span class="name">Last backup:</span><span class="value"><span class="humaneDate" data-date="{{lastBackup}}"></span></span>
                 </li>
+                <li class="bundles">
+                    <span class="name">Active bundles:</span><span class="value">{{bundles}}</span>
+                </li>
             </ul>
             <ul class="buttons">
                 <li>
@@ -153,71 +156,19 @@
                     return {
                         name: db.Name,
                         size: db.SizeMb,
-                        lastBackup: db.LastBackup ? new Date(raven.utils.deserializeDate(db.LastBackup)).getTime() : ""
+                        lastBackup: db.LastBackup ? new Date(raven.utils.deserializeDate(db.LastBackup)).getTime() : "",
+                        bundles: db.ActiveBundles || "(none)"
                     };
                 })                  
             };
             var ul = $('.flach.db');
-            var rendered = $(Mustache.render(template, viewModel));
+            var rendered = Mustache.render(template, viewModel);
             
             if (append) {
-                ul.append(rendered);
+                ul.append($(rendered));
             } else {
                 ul.html(rendered);
             }
-
-            rendered.find('.button.delete')
-                .on('click', function(e) {
-                    var button = $(e.target);
-
-                    var db = button.parents('li.db').data('db');
-
-                    $('#deleteConfirmationDialog').dialog({
-                        autoOpen: true,
-                        modal: true,
-                        title: 'About to delete database ' + db,
-                        width: 500,
-                        buttons: {
-                            'Delete': function () {
-                                $(this).parent().find('form').submit();
-                                return true;
-                            },
-                            'Cancel': function () {
-                                $('#deleteConfirmationDialog').dialog('destroy');
-                            }
-                        }
-                    });
-                
-                    $('#deleteDatabaseConfirmationName').val(db);
-                    $('#deleteDatabaseConfirmationNameVerify').val('');
-                })
-                .button({ icons: { primary: 'ui-icon-trash'} });
-        
-            rendered.find('.button.restore')
-                .button({ icons: { primary: 'rd-icon-restore'} });
-        
-            rendered.find('.button.backup')
-                .button({ icons: { primary: 'rd-icon-backup'} })
-                .on('click', function (e) {
-                    var db = $(e.target).parents('.db').data('db');
-                    var dialog = $('#backupDialog');
-                    dialog.find('input[name=name]').val(db);
-                
-                    dialog.dialog({
-                        modal: true,
-                        title: 'Backup database ' + db,
-                        width: 400,
-                        buttons: {
-                            'Start Backup': function () {
-                                $(this).find('form').submit();
-                            },
-                            'Cancel': function () {
-                                $(this).dialog('destroy');
-                            }
-                        }
-                    });
-                
-                });
 
             updateDates();
         };
@@ -257,7 +208,6 @@
 
         var prevSearchBoxVal = $('#searchBox').val();
         if (prevSearchBoxVal !== '') {
-            prevSearchBoxVal = '';
             handleSearchQuery();
         }
 
@@ -291,6 +241,61 @@
         });
         
         $('#newButton').button({ icons: { primary: 'ui-icon-plus'} });
+        $('.button.delete')
+            .on('click', function(e) {
+                var button = $(e.target);
+
+                var db = button.parents('li.db').data('db');
+
+                $('#deleteConfirmationDialog').dialog({
+                    autoOpen: true,
+                    modal: true,
+                    title: 'About to delete database ' + db,
+                    width: 500,
+                    buttons: {
+                        'Delete': function () {
+                            $(this).parent().find('form').submit();
+                            return true;
+                        },
+                        'Cancel': function () {
+                            $('#deleteConfirmationDialog').dialog('destroy');
+                        }
+                    }
+                });
+                
+                $('#deleteDatabaseConfirmationName').val(db);
+                $('#deleteDatabaseConfirmationNameVerify').val('');
+            })
+            .button({ icons: { primary: 'ui-icon-trash'} });
+        
+        $('.button.restore')
+            .button({ icons: { primary: 'rd-icon-restore'} });
+        
+        var savedBackupPath;
+        $('.button.backup')
+            .button({ icons: { primary: 'rd-icon-backup'} })
+            .on('click', function (e) {
+                var db = $(e.target).parents('.db').data('db');
+                var dialog = $('#backupDialog');
+                dialog.find('input[name=name]').val(db);
+                dialog.find('input[name=path]').val(savedBackupPath);                
+
+                dialog.dialog({
+                    modal: true,
+                    title: 'Backup database ' + db,
+                    width: 400,
+                    buttons: {
+                        'Start Backup': function () {
+                            $(this).find('form').submit();
+                        },
+                        'Cancel': function () {
+                            $(this).dialog('destroy');
+                        }
+                    }
+                });
+                
+            });
+
         $('#backupDialog form')
             .validate({
                 rules: {
@@ -305,6 +310,7 @@
                             return form.valid();
                         },
                         success: function(responseText, statusText, xhr, form) {
+                            savedBackupPath = form.find('input[name=path]').val();
                             var db = form.find('input[name=name]').val();
                             raven.ui.displayMessage($.format('Backup for database {0} has started', db));
                             var lastBackup = $(".db[data-db='" + db + "'] .lastBackup");

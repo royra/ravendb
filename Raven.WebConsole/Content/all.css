@@ -1567,7 +1567,7 @@ ul.flach.user>li>.name {
 ul.flach ul.props {
     float: right;
     display: inline-block;
-    width: 200px;
+    width: 208px;
     color: #555555;
 }
 
@@ -1578,7 +1578,7 @@ ul.flach ul.props>li {
 ul.flach ul.props .name {
     font-size: 13px;
     display: inline-block;
-    width: 80px;
+    width: 88px;
 }
 
 ul.flach ul.props .value {

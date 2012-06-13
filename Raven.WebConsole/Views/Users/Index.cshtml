@@ -10,9 +10,9 @@
     } else if (user.Databases.Any())
     {
         var s = string.Join(", ", user.Databases.Select(d => d.Name));
-        if (s.Length > 30)
+        if (s.Length > 25)
         {
-            var last = s.LastIndexOf(',');
+            var last = s.Substring(0, 25).LastIndexOf(',');
             s = s.Substring(0, last) + ", ...";
         }
         
@@ -90,7 +90,7 @@
                 <li class="admin changeable">
                     <span class="name">Admin:</span><span class="value" data-is-admin="@Json.Encode(user.IsAdmin)">@(user.IsAdmin ? "Yes" : "No")</span>
                 </li>
-                <li class="dbAccess changeable">
+                <li class="dbAccess changeable" title="@string.Join(", ", user.Databases.Select(d => d.Name)) (click to manage)">
                     <span class="name">Allowed DBs:</span><span class="value">@GetAllowedDbs(user)</span>
                 </li>
             </ul>
@@ -527,7 +527,6 @@
             });
 
         $('.dbAccess')
-            .attr('title', 'Click to manage')
             .on('click', function() {
                 var user = $(this).parents('li.user').data('user');
                 populateDbAccessDialogForUserName(user);
