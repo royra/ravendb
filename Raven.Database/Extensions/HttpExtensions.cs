@@ -487,14 +487,17 @@ namespace Raven.Database.Extensions
 			var windowsPrincipal = principal as WindowsPrincipal;
 			if (windowsPrincipal != null)
 			{
-				// if the request was made using the same user as RavenDB is running as, we consider this
-				// to be an administrator request
-
-				var current = WindowsIdentity.GetCurrent();
-				if (current != null && current.User == ((WindowsIdentity)windowsPrincipal.Identity).User)
+				if (windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator))
 					return true;
 
-				return windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator);
+				var applicationIdentity = WindowsIdentity.GetCurrent();
+
+				if (applicationIdentity != null)
+				{
+					// if the auth user and the app are the same, consider him an admin
+					if (applicationIdentity.User == ((WindowsIdentity) windowsPrincipal.Identity).User)
+						return true;
+				}
 			}
 
 			return principal.IsInRole("Administrators");
